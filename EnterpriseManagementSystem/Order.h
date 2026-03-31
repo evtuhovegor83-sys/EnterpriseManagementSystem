@@ -40,4 +40,7 @@ public:
     std::string GetOrderDate() const { return orderDate; }
     int GetEmployeeID() const { return employeeID; }
     std::string GetStatus() const { return status; }
+
+    // Дополнительная функция 1: Расчет общей стоимости заказа
+    static double CalculateOrderTotal(DatabaseManager& db, int orderID);
 };

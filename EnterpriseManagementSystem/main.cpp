@@ -202,6 +202,7 @@ void ShowMenu() {
     std::cout << "12. EXPORT: Top 5 parts to CSV" << std::endl;
     std::cout << "13. EXPORT: Low stock parts to CSV" << std::endl;
     std::cout << "14. View parts with PAGINATION (OFFSET/FETCH)" << std::endl;
+    std::cout << "15. Calculate order total (Bonus function #1)" << std::endl;
     std::cout << "0. Exit" << std::endl;
     std::cout << "Choice: ";
 }
@@ -366,6 +367,15 @@ int main() {
         case 14:
             PrintPartsPaginated(db);
             break;
+        case 15:
+        {
+            int orderId;
+            std::cout << "Enter order ID: ";
+            std::cin >> orderId;
+            double total = Order::CalculateOrderTotal(db, orderId);
+            std::cout << "Order total: " << total << std::endl;
+        }
+        break;
         case 0:
             std::cout << "Goodbye!" << std::endl;
             break;

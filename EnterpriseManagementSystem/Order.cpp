@@ -122,3 +122,25 @@ bool Order::UpdateStatus(DatabaseManager& db, int orderID, const std::string& ne
 
     return db.ExecuteNonQuery(ss.str());
 }
+
+// ============ ДОПОЛНИТЕЛЬНАЯ ФУНКЦИЯ 1: Расчет общей стоимости заказа ============
+
+double Order::CalculateOrderTotal(DatabaseManager& db, int orderID) {
+    if (!db.IsConnected()) return 0.0;
+
+    SQLHSTMT hstmt = NULL;
+    std::stringstream ss;
+    ss << "SELECT SUM(op.Quantity * p.Price) as Total "
+        << "FROM OrderParts op "
+        << "INNER JOIN Parts p ON op.PartID = p.PartID "
+        << "WHERE op.OrderID = " << orderID;
+
+    if (!db.ExecuteQuery(ss.str(), hstmt)) return 0.0;
+
+    double total = 0.0;
+    SQLFetch(hstmt);
+    SQLGetData(hstmt, 1, SQL_C_DOUBLE, &total, sizeof(total), NULL);
+
+    SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+    return total;
+}
