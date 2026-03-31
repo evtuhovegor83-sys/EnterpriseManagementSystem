@@ -35,6 +35,13 @@ public:
     // Сложный JOIN запрос: детали + склад + поставщик
     static bool GetPartsWithDetails(DatabaseManager& db, SQLHSTMT& hstmt);
 
+    // ============ ПОСТРАНИЧНАЯ НАВИГАЦИЯ ============
+    // Получение деталей с пагинацией (OFFSET/FETCH)
+    static bool GetPartsPaginated(DatabaseManager& db, int pageNumber, int pageSize, SQLHSTMT& hstmt);
+
+    // Получение общего количества деталей
+    static int GetPartsTotalCount(DatabaseManager& db);
+
     // Getters
     int GetID() const { return partID; }
     std::string GetPartName() const { return partName; }

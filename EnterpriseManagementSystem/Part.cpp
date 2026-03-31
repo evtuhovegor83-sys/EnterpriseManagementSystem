@@ -199,3 +199,38 @@ bool Part::GetPartsWithDetails(DatabaseManager& db, SQLHSTMT& hstmt) {
 
     return db.ExecuteQuery(query, hstmt);
 }
+
+// ============ ÏÎÑÒĞÀÍÈ×ÍÀß ÍÀÂÈÃÀÖÈß ============
+
+bool Part::GetPartsPaginated(DatabaseManager& db, int pageNumber, int pageSize, SQLHSTMT& hstmt) {
+    if (!db.IsConnected()) return false;
+
+    if (pageNumber < 1) pageNumber = 1;
+    if (pageSize < 1) pageSize = 10;
+
+    int offset = (pageNumber - 1) * pageSize;
+
+    std::stringstream ss;
+    ss << "SELECT PartID, PartName, PartNumber, Price, StockQuantity FROM Parts "
+        << "ORDER BY PartID "
+        << "OFFSET " << offset << " ROWS "
+        << "FETCH NEXT " << pageSize << " ROWS ONLY";
+
+    return db.ExecuteQuery(ss.str(), hstmt);
+}
+
+int Part::GetPartsTotalCount(DatabaseManager& db) {
+    if (!db.IsConnected()) return 0;
+
+    SQLHSTMT hstmt = NULL;
+    if (!db.ExecuteQuery("SELECT COUNT(*) FROM Parts", hstmt)) {
+        return 0;
+    }
+
+    int count = 0;
+    SQLFetch(hstmt);
+    SQLGetData(hstmt, 1, SQL_C_SLONG, &count, sizeof(count), NULL);
+
+    SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+    return count;
+}

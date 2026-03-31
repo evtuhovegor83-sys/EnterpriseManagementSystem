@@ -106,6 +106,84 @@ void PrintTop5Parts(DatabaseManager& db, const std::string& startDate, const std
     }
 }
 
+// ============ ÏÎÑÒĞÀÍÈ×ÍÀß ÍÀÂÈÃÀÖÈß ÄËß ÄÅÒÀËÅÉ ============
+void PrintPartsPaginated(DatabaseManager& db) {
+    int pageSize = 5;
+    int totalCount = Part::GetPartsTotalCount(db);
+
+    if (totalCount == 0) {
+        std::cout << "No parts found in database!" << std::endl;
+        return;
+    }
+
+    int totalPages = (totalCount + pageSize - 1) / pageSize;
+    int currentPage = 1;
+
+    do {
+        SQLHSTMT hstmt = NULL;
+        if (Part::GetPartsPaginated(db, currentPage, pageSize, hstmt)) {
+            std::cout << "\n=== Parts List - Page " << currentPage << " of " << totalPages << " (Total: " << totalCount << " parts) ===" << std::endl;
+            std::cout << "----------------------------------------------------------------" << std::endl;
+
+            SQLINTEGER id, stock;
+            char name[100], number[50];
+            double price;
+
+            SQLBindCol(hstmt, 1, SQL_C_SLONG, &id, 0, NULL);
+            SQLBindCol(hstmt, 2, SQL_C_CHAR, name, sizeof(name), NULL);
+            SQLBindCol(hstmt, 3, SQL_C_CHAR, number, sizeof(number), NULL);
+            SQLBindCol(hstmt, 4, SQL_C_DOUBLE, &price, 0, NULL);
+            SQLBindCol(hstmt, 5, SQL_C_SLONG, &stock, 0, NULL);
+
+            int rowCount = 0;
+            while (SQLFetch(hstmt) == SQL_SUCCESS) {
+                std::cout << "ID: " << id << " | " << name << " | " << number
+                    << " | Price: " << price << " | Stock: " << stock << std::endl;
+                rowCount++;
+            }
+
+            if (rowCount == 0) {
+                std::cout << "No parts found on this page." << std::endl;
+            }
+
+            std::cout << "----------------------------------------------------------------" << std::endl;
+            SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+        }
+
+        std::cout << "\n[N]ext page | [P]revious page | [F]irst page | [L]ast page | [Q]uit: ";
+        char choice;
+        std::cin >> choice;
+
+        if (choice == 'N' || choice == 'n') {
+            if (currentPage < totalPages) {
+                currentPage++;
+            }
+            else {
+                std::cout << "You are on the last page!" << std::endl;
+            }
+        }
+        else if (choice == 'P' || choice == 'p') {
+            if (currentPage > 1) {
+                currentPage--;
+            }
+            else {
+                std::cout << "You are on the first page!" << std::endl;
+            }
+        }
+        else if (choice == 'F' || choice == 'f') {
+            currentPage = 1;
+            std::cout << "Jumped to first page!" << std::endl;
+        }
+        else if (choice == 'L' || choice == 'l') {
+            currentPage = totalPages;
+            std::cout << "Jumped to last page!" << std::endl;
+        }
+        else if (choice == 'Q' || choice == 'q') {
+            break;
+        }
+    } while (true);
+}
+
 void ShowMenu() {
     std::cout << "\n========================================" << std::endl;
     std::cout << "  MAIN MENU" << std::endl;
@@ -123,6 +201,7 @@ void ShowMenu() {
     std::cout << "11. EXPORT: Orders report to CSV" << std::endl;
     std::cout << "12. EXPORT: Top 5 parts to CSV" << std::endl;
     std::cout << "13. EXPORT: Low stock parts to CSV" << std::endl;
+    std::cout << "14. View parts with PAGINATION (OFFSET/FETCH)" << std::endl;
     std::cout << "0. Exit" << std::endl;
     std::cout << "Choice: ";
 }
@@ -284,6 +363,9 @@ int main() {
             }
         }
         break;
+        case 14:
+            PrintPartsPaginated(db);
+            break;
         case 0:
             std::cout << "Goodbye!" << std::endl;
             break;
