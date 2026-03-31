@@ -1,4 +1,5 @@
 #include "Part.h"
+#include "AuthManager.h"
 #include <iostream>
 #include <regex>
 #include <sstream>
@@ -233,4 +234,31 @@ int Part::GetPartsTotalCount(DatabaseManager& db) {
 
     SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
     return count;
+}
+
+// ============ ƒќѕќЋЌ»“≈Ћ№Ќјя ‘”Ќ ÷»я 3: ќбновление цены с проверкой прав ============
+
+bool Part::UpdatePriceWithAuth(DatabaseManager& db, AuthManager& auth, int partID, double newPrice) {
+    if (!auth.CanEdit()) {
+        std::cout << "Access denied: Only Manager+ can update prices!" << std::endl;
+        return false;
+    }
+
+    if (!ValidatePrice(newPrice)) {
+        std::cerr << "Error: Invalid price value! Price must be between 0 and 10,000,000" << std::endl;
+        return false;
+    }
+
+    std::stringstream ss;
+    ss << "UPDATE Parts SET Price = " << newPrice << " WHERE PartID = " << partID;
+
+    bool result = db.ExecuteNonQuery(ss.str());
+    if (result) {
+        std::cout << "Price updated successfully!" << std::endl;
+    }
+    else {
+        std::cout << "Failed to update price!" << std::endl;
+    }
+
+    return result;
 }

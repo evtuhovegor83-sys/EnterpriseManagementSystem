@@ -204,6 +204,7 @@ void ShowMenu() {
     std::cout << "14. View parts with PAGINATION (OFFSET/FETCH)" << std::endl;
     std::cout << "15. Calculate order total (Bonus function #1)" << std::endl;
     std::cout << "16. Get employees by department (Bonus function #2)" << std::endl;
+    std::cout << "17. Update part price with auth (Bonus function #3)" << std::endl;
     std::cout << "0. Exit" << std::endl;
     std::cout << "Choice: ";
 }
@@ -414,6 +415,39 @@ int main() {
 
                 SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
             }
+        }
+        break;
+        case 17:
+        {
+            // Сначала покажем список деталей
+            SQLHSTMT hstmtParts = NULL;
+            if (Part::GetAll(db, hstmtParts)) {
+                std::cout << "\n=== Available Parts ===" << std::endl;
+                SQLINTEGER pid, pstock;
+                char pname[100], pnumber[50];
+                double pprice;
+
+                SQLBindCol(hstmtParts, 1, SQL_C_SLONG, &pid, 0, NULL);
+                SQLBindCol(hstmtParts, 2, SQL_C_CHAR, pname, sizeof(pname), NULL);
+                SQLBindCol(hstmtParts, 3, SQL_C_CHAR, pnumber, sizeof(pnumber), NULL);
+                SQLBindCol(hstmtParts, 4, SQL_C_DOUBLE, &pprice, 0, NULL);
+                SQLBindCol(hstmtParts, 5, SQL_C_SLONG, &pstock, 0, NULL);
+
+                while (SQLFetch(hstmtParts) == SQL_SUCCESS) {
+                    std::cout << "ID: " << pid << " | " << pname << " | Price: " << pprice << std::endl;
+                }
+                SQLFreeHandle(SQL_HANDLE_STMT, hstmtParts);
+            }
+
+            int partId;
+            double newPrice;
+            std::cout << "\nEnter part ID to update price: ";
+            std::cin >> partId;
+            std::cout << "Enter new price: ";
+            std::cin >> newPrice;
+
+            Part p;
+            p.UpdatePriceWithAuth(db, auth, partId, newPrice);
         }
         break;
         case 0:

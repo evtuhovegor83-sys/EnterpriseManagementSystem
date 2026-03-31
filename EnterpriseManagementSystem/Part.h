@@ -2,6 +2,9 @@
 #include <string>
 #include "DatabaseManager.h"
 
+// Forward declaration
+class AuthManager;
+
 class Part {
 private:
     int partID;
@@ -12,9 +15,10 @@ private:
     int warehouseID;
     int supplierID;
 
-    bool ValidatePrice(double price);
-    bool ValidateStockQuantity(int quantity);
-    bool ValidatePartName(const std::string& name);
+    // Сделаем эти методы статическими, чтобы можно было вызывать без объекта
+    static bool ValidatePrice(double price);
+    static bool ValidateStockQuantity(int quantity);
+    static bool ValidatePartName(const std::string& name);
 
 public:
     Part();
@@ -36,10 +40,7 @@ public:
     static bool GetPartsWithDetails(DatabaseManager& db, SQLHSTMT& hstmt);
 
     // ============ ПОСТРАНИЧНАЯ НАВИГАЦИЯ ============
-    // Получение деталей с пагинацией (OFFSET/FETCH)
     static bool GetPartsPaginated(DatabaseManager& db, int pageNumber, int pageSize, SQLHSTMT& hstmt);
-
-    // Получение общего количества деталей
     static int GetPartsTotalCount(DatabaseManager& db);
 
     // Getters
@@ -58,4 +59,7 @@ public:
     bool SetStockQuantity(int quantity);
     void SetWarehouseID(int id);
     void SetSupplierID(int id);
+
+    // Дополнительная функция 3: Обновление цены с проверкой прав
+    bool UpdatePriceWithAuth(DatabaseManager& db, AuthManager& auth, int partID, double newPrice);
 };
