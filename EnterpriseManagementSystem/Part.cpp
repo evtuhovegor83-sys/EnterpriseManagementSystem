@@ -1,4 +1,4 @@
-#include "Part.h"
+ï»¿#include "Part.h"
 #include "AuthManager.h"
 #include <iostream>
 #include <regex>
@@ -185,7 +185,7 @@ bool Part::GetLowStock(DatabaseManager& db, int threshold, SQLHSTMT& hstmt) {
     return db.ExecuteQuery(ss.str(), hstmt);
 }
 
-// ÑËÎÆÍÛÉ JOIN çàïğîñ (áîëåå 3 òàáëèö)
+// Ğ¡Ğ›ĞĞ–ĞĞ«Ğ™ JOIN Ğ·Ğ°Ğ¿Ñ€Ğ¾Ñ (Ğ±Ğ¾Ğ»ĞµĞµ 3 Ñ‚Ğ°Ğ±Ğ»Ğ¸Ñ†)
 bool Part::GetPartsWithDetails(DatabaseManager& db, SQLHSTMT& hstmt) {
     if (!db.IsConnected()) return false;
 
@@ -201,7 +201,7 @@ bool Part::GetPartsWithDetails(DatabaseManager& db, SQLHSTMT& hstmt) {
     return db.ExecuteQuery(query, hstmt);
 }
 
-// ============ ÏÎÑÒĞÀÍÈ×ÍÀß ÍÀÂÈÃÀÖÈß ============
+// ============ ĞŸĞĞ¡Ğ¢Ğ ĞĞĞ˜Ğ§ĞĞĞ¯ ĞĞĞ’Ğ˜Ğ“ĞĞ¦Ğ˜Ğ¯ ============
 
 bool Part::GetPartsPaginated(DatabaseManager& db, int pageNumber, int pageSize, SQLHSTMT& hstmt) {
     if (!db.IsConnected()) return false;
@@ -236,7 +236,7 @@ int Part::GetPartsTotalCount(DatabaseManager& db) {
     return count;
 }
 
-// ============ ÄÎÏÎËÍÈÒÅËÜÍÀß ÔÓÍÊÖÈß 3: Îáíîâëåíèå öåíû ñ ïğîâåğêîé ïğàâ ============
+// ============ Ğ”ĞĞŸĞĞ›ĞĞ˜Ğ¢Ğ•Ğ›Ğ¬ĞĞĞ¯ Ğ¤Ğ£ĞĞšĞ¦Ğ˜Ğ¯ 3: ĞĞ±Ğ½Ğ¾Ğ²Ğ»ĞµĞ½Ğ¸Ğµ Ñ†ĞµĞ½Ñ‹ Ñ Ğ¿Ñ€Ğ¾Ğ²ĞµÑ€ĞºĞ¾Ğ¹ Ğ¿Ñ€Ğ°Ğ² ============
 
 bool Part::UpdatePriceWithAuth(DatabaseManager& db, AuthManager& auth, int partID, double newPrice) {
     if (!auth.CanEdit()) {
@@ -261,4 +261,55 @@ bool Part::UpdatePriceWithAuth(DatabaseManager& db, AuthManager& auth, int partI
     }
 
     return result;
+}
+
+// ============ Ğ”ĞĞŸĞĞ›ĞĞ˜Ğ¢Ğ•Ğ›Ğ¬ĞĞĞ¯ Ğ¤Ğ£ĞĞšĞ¦Ğ˜Ğ¯ 4: Ğ¡Ñ‚Ğ°Ñ‚Ğ¸ÑÑ‚Ğ¸ĞºĞ° Ğ¿Ğ¾ ÑĞºĞ»Ğ°Ğ´Ñƒ ============
+
+void Part::GetWarehouseStatistics(DatabaseManager& db) {
+    if (!db.IsConnected()) return;
+
+    SQLHSTMT hstmt = NULL;
+    std::string query =
+        "SELECT w.WarehouseName, "
+        "COUNT(p.PartID) as TotalParts, "
+        "ISNULL(SUM(p.StockQuantity), 0) as TotalItems, "
+        "ISNULL(SUM(p.Price * p.StockQuantity), 0) as TotalValue "
+        "FROM Warehouses w "
+        "LEFT JOIN Parts p ON w.WarehouseID = p.WarehouseID "
+        "GROUP BY w.WarehouseName";
+
+    if (db.ExecuteQuery(query, hstmt)) {
+        std::cout << "\n========================================" << std::endl;
+        std::cout << "     WAREHOUSE STATISTICS" << std::endl;
+        std::cout << "========================================" << std::endl;
+
+        char warehouseName[100];
+        SQLINTEGER totalParts, totalItems;
+        double totalValue;
+
+        SQLBindCol(hstmt, 1, SQL_C_CHAR, warehouseName, sizeof(warehouseName), NULL);
+        SQLBindCol(hstmt, 2, SQL_C_SLONG, &totalParts, 0, NULL);
+        SQLBindCol(hstmt, 3, SQL_C_SLONG, &totalItems, 0, NULL);
+        SQLBindCol(hstmt, 4, SQL_C_DOUBLE, &totalValue, 0, NULL);
+
+        int rowCount = 0;
+        while (SQLFetch(hstmt) == SQL_SUCCESS) {
+            std::cout << "\nWarehouse: " << warehouseName << std::endl;
+            std::cout << "  â”œâ”€ Unique parts: " << totalParts << std::endl;
+            std::cout << "  â”œâ”€ Total items:  " << totalItems << std::endl;
+            std::cout << "  â””â”€ Total value:  " << totalValue << " RUB" << std::endl;
+            rowCount++;
+        }
+
+        if (rowCount == 0) {
+            std::cout << "No warehouse data found." << std::endl;
+        }
+
+        std::cout << "\n========================================" << std::endl;
+
+        SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+    }
+    else {
+        std::cout << "Failed to retrieve warehouse statistics!" << std::endl;
+    }
 }

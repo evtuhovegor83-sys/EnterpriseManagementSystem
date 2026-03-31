@@ -205,6 +205,7 @@ void ShowMenu() {
     std::cout << "15. Calculate order total (Bonus function #1)" << std::endl;
     std::cout << "16. Get employees by department (Bonus function #2)" << std::endl;
     std::cout << "17. Update part price with auth (Bonus function #3)" << std::endl;
+    std::cout << "18. Warehouse statistics (Bonus function #4)" << std::endl;
     std::cout << "0. Exit" << std::endl;
     std::cout << "Choice: ";
 }
@@ -450,6 +451,9 @@ int main() {
             p.UpdatePriceWithAuth(db, auth, partId, newPrice);
         }
         break;
+        case 18:
+            Part::GetWarehouseStatistics(db);
+            break;
         case 0:
             std::cout << "Goodbye!" << std::endl;
             break;
