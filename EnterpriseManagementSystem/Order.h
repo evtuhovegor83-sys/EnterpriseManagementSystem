@@ -43,4 +43,7 @@ public:
 
     // Дополнительная функция 1: Расчет общей стоимости заказа
     static double CalculateOrderTotal(DatabaseManager& db, int orderID);
+
+    // Дополнительная функция 5: Отмена заказа с возвратом товаров
+    bool CancelOrderWithRestore(DatabaseManager& db, int orderID);
 };

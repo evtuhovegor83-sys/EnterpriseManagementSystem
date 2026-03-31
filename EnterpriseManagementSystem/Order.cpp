@@ -144,3 +144,66 @@ double Order::CalculateOrderTotal(DatabaseManager& db, int orderID) {
     SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
     return total;
 }
+
+// ============ ДОПОЛНИТЕЛЬНАЯ ФУНКЦИЯ 5: Отмена заказа с возвратом товаров ============
+
+bool Order::CancelOrderWithRestore(DatabaseManager& db, int orderID) {
+    if (!db.IsConnected()) return false;
+
+    // Проверяем текущий статус
+    SQLHSTMT hstmtCheck = NULL;
+    std::stringstream checkQuery;
+    checkQuery << "SELECT Status FROM Orders WHERE OrderID = " << orderID;
+
+    if (!db.ExecuteQuery(checkQuery.str(), hstmtCheck)) {
+        std::cout << "Failed to check order status!" << std::endl;
+        return false;
+    }
+
+    char status[20];
+    SQLRETURN ret = SQLFetch(hstmtCheck);
+    if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) {
+        std::cout << "Order not found!" << std::endl;
+        SQLFreeHandle(SQL_HANDLE_STMT, hstmtCheck);
+        return false;
+    }
+
+    SQLGetData(hstmtCheck, 1, SQL_C_CHAR, status, sizeof(status), NULL);
+    SQLFreeHandle(SQL_HANDLE_STMT, hstmtCheck);
+
+    std::string statusStr(status);
+
+    if (statusStr == "Cancelled" || statusStr == "Отменен") {
+        std::cout << "Order is already cancelled!" << std::endl;
+        return false;
+    }
+
+    if (statusStr == "Completed" || statusStr == "Выполнен") {
+        std::cout << "Cannot cancel completed order!" << std::endl;
+        return false;
+    }
+
+    // Возвращаем товары на склад
+    std::stringstream restoreQuery;
+    restoreQuery << "UPDATE p SET p.StockQuantity = p.StockQuantity + op.Quantity "
+        << "FROM Parts p "
+        << "INNER JOIN OrderParts op ON p.PartID = op.PartID "
+        << "WHERE op.OrderID = " << orderID;
+
+    if (!db.ExecuteNonQuery(restoreQuery.str())) {
+        std::cout << "Failed to restore stock!" << std::endl;
+        return false;
+    }
+
+    // Обновляем статус
+    std::stringstream updateQuery;
+    updateQuery << "UPDATE Orders SET Status = 'Cancelled' WHERE OrderID = " << orderID;
+
+    if (!db.ExecuteNonQuery(updateQuery.str())) {
+        std::cout << "Failed to update order status!" << std::endl;
+        return false;
+    }
+
+    std::cout << "Order #" << orderID << " cancelled and stock restored successfully!" << std::endl;
+    return true;
+}

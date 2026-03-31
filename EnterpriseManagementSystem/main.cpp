@@ -206,6 +206,7 @@ void ShowMenu() {
     std::cout << "16. Get employees by department (Bonus function #2)" << std::endl;
     std::cout << "17. Update part price with auth (Bonus function #3)" << std::endl;
     std::cout << "18. Warehouse statistics (Bonus function #4)" << std::endl;
+    std::cout << "19. Cancel order with restore (Bonus function #5)" << std::endl;
     std::cout << "0. Exit" << std::endl;
     std::cout << "Choice: ";
 }
@@ -454,6 +455,33 @@ int main() {
         case 18:
             Part::GetWarehouseStatistics(db);
             break;
+        case 19:
+        {
+            // Сначала покажем список активных заказов
+            SQLHSTMT hstmtOrders = NULL;
+            std::string activeQuery = "SELECT OrderID, OrderDate, Status FROM Orders WHERE Status != 'Cancelled' AND Status != 'Выполнен' AND Status != 'Completed'";
+            if (db.ExecuteQuery(activeQuery, hstmtOrders)) {
+                std::cout << "\n=== Active Orders ===" << std::endl;
+                SQLINTEGER oid;
+                char odate[20], ostatus[20];
+                SQLBindCol(hstmtOrders, 1, SQL_C_SLONG, &oid, 0, NULL);
+                SQLBindCol(hstmtOrders, 2, SQL_C_CHAR, odate, sizeof(odate), NULL);
+                SQLBindCol(hstmtOrders, 3, SQL_C_CHAR, ostatus, sizeof(ostatus), NULL);
+
+                while (SQLFetch(hstmtOrders) == SQL_SUCCESS) {
+                    std::cout << "ID: " << oid << " | Date: " << odate << " | Status: " << ostatus << std::endl;
+                }
+                SQLFreeHandle(SQL_HANDLE_STMT, hstmtOrders);
+            }
+
+            int orderId;
+            std::cout << "\nEnter order ID to cancel: ";
+            std::cin >> orderId;
+
+            Order o;
+            o.CancelOrderWithRestore(db, orderId);
+        }
+        break;
         case 0:
             std::cout << "Goodbye!" << std::endl;
             break;
