@@ -1,4 +1,5 @@
 #include "Employee.h"
+#include "AuthManager.h"
 #include <iostream>
 #include <regex>
 #include <sstream>
@@ -189,6 +190,14 @@ bool Employee::Delete(DatabaseManager& db, int id) {
     std::stringstream ss;
     ss << "DELETE FROM Employees WHERE EmployeeID = " << id;
     return db.ExecuteNonQuery(ss.str());
+}
+
+bool Employee::DeleteWithAuth(DatabaseManager& db, AuthManager& auth, int id) {
+    if (!auth.CanDelete()) {
+        std::cout << "Access denied: Only Administrator can delete employees!" << std::endl;
+        return false;
+    }
+    return Delete(db, id);
 }
 
 bool Employee::GetAll(DatabaseManager& db, SQLHSTMT& hstmt) {

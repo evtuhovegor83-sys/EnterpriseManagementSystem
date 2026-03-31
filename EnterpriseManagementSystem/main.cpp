@@ -3,6 +3,7 @@
 #include "Employee.h"
 #include "Part.h"
 #include "Order.h"
+#include "AuthManager.h"
 
 void PrintAllEmployees(DatabaseManager& db) {
     SQLHSTMT hstmt = NULL;
@@ -102,6 +103,22 @@ void PrintTop5Parts(DatabaseManager& db, const std::string& startDate, const std
     }
 }
 
+void ShowMenu() {
+    std::cout << "\n========================================" << std::endl;
+    std::cout << "  MAIN MENU" << std::endl;
+    std::cout << "========================================" << std::endl;
+    std::cout << "1. View all employees" << std::endl;
+    std::cout << "2. View all parts" << std::endl;
+    std::cout << "3. View orders with details" << std::endl;
+    std::cout << "4. View top 5 parts by sales" << std::endl;
+    std::cout << "5. Create new order (requires Manager+)" << std::endl;
+    std::cout << "6. Add new part (requires Manager+)" << std::endl;
+    std::cout << "7. Add new employee (requires Admin only)" << std::endl;
+    std::cout << "8. Delete employee (requires Admin only)" << std::endl;
+    std::cout << "0. Exit" << std::endl;
+    std::cout << "Choice: ";
+}
+
 int main() {
     setlocale(LC_ALL, "ru");
 
@@ -111,109 +128,112 @@ int main() {
     std::cout << std::endl;
 
     DatabaseManager db;
+    AuthManager auth;
 
-    if (db.Connect("DESKTOP-OO16Q6Q\\SQLEXPRESS", "ProductionDB")) {
-        std::cout << "SUCCESS! Connected to database." << std::endl;
-
-        // ============ DEMO 1: Employee CRUD ============
-        std::cout << "\n========== DEMO 1: Employee CRUD ==========" << std::endl;
-
-        Employee newEmp;
-        newEmp.SetLastName("Smirnov");
-        newEmp.SetFirstName("Andrey");
-        newEmp.SetMiddleName("Nikolaevich");
-        newEmp.SetEmail("andrey.smirnov@company.ru");
-        newEmp.SetSalary(75000);
-        newEmp.SetDepartmentID(1);
-
-        if (newEmp.Create(db)) {
-            std::cout << "[OK] New employee added: Smirnov Andrey" << std::endl;
-        }
-
-        PrintAllEmployees(db);
-
-        // ============ DEMO 2: Part CRUD ============
-        std::cout << "\n========== DEMO 2: Part CRUD ==========" << std::endl;
-
-        Part newPart;
-        newPart.SetPartName("Bolt M8");
-        newPart.SetPartNumber("BLT-008");
-        newPart.SetPrice(25.50);
-        newPart.SetStockQuantity(500);
-        newPart.SetWarehouseID(1);
-        newPart.SetSupplierID(1);
-
-        if (newPart.Create(db)) {
-            std::cout << "[OK] New part added: Bolt M8" << std::endl;
-        }
-
-        PrintAllParts(db);
-
-        // ============ DEMO 3: Complex JOIN query ============
-        std::cout << "\n========== DEMO 3: Complex JOIN (Parts with Warehouse and Supplier) ==========" << std::endl;
-
-        SQLHSTMT hstmt = NULL;
-        if (Part::GetPartsWithDetails(db, hstmt)) {
-            SQLINTEGER id, stock;
-            char name[100], number[50], warehouseName[100], warehouseLoc[100], supplierName[100], phone[20], email[100];
-            double price;
-
-            SQLBindCol(hstmt, 1, SQL_C_SLONG, &id, 0, NULL);
-            SQLBindCol(hstmt, 2, SQL_C_CHAR, name, sizeof(name), NULL);
-            SQLBindCol(hstmt, 3, SQL_C_CHAR, number, sizeof(number), NULL);
-            SQLBindCol(hstmt, 4, SQL_C_DOUBLE, &price, 0, NULL);
-            SQLBindCol(hstmt, 5, SQL_C_SLONG, &stock, 0, NULL);
-            SQLBindCol(hstmt, 6, SQL_C_CHAR, warehouseName, sizeof(warehouseName), NULL);
-            SQLBindCol(hstmt, 7, SQL_C_CHAR, warehouseLoc, sizeof(warehouseLoc), NULL);
-            SQLBindCol(hstmt, 8, SQL_C_CHAR, supplierName, sizeof(supplierName), NULL);
-            SQLBindCol(hstmt, 9, SQL_C_CHAR, phone, sizeof(phone), NULL);
-            SQLBindCol(hstmt, 10, SQL_C_CHAR, email, sizeof(email), NULL);
-
-            while (SQLFetch(hstmt) == SQL_SUCCESS) {
-                std::cout << "Part: " << name << " | Stock: " << stock
-                    << " | Warehouse: " << warehouseName
-                    << " | Supplier: " << supplierName << std::endl;
-            }
-            SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
-        }
-
-        // ============ DEMO 4: Order with stored procedure ============
-        std::cout << "\n========== DEMO 4: Create Order with Stored Procedure (sp_CreateOrder) ==========" << std::endl;
-
-        Order newOrder;
-        std::vector<OrderPartItem> items;
-
-        // Заказываем 50 винтов (PartID=1) и 30 гаек (PartID=2)
-        OrderPartItem item1;
-        item1.partID = 1;
-        item1.quantity = 50;
-        items.push_back(item1);
-
-        OrderPartItem item2;
-        item2.partID = 2;
-        item2.quantity = 30;
-        items.push_back(item2);
-
-        if (newOrder.CreateWithProcedure(db, 2, "2025-03-25", items)) {
-            std::cout << "[OK] Order created successfully!" << std::endl;
-        }
-        else {
-            std::cout << "[FAIL] Failed to create order" << std::endl;
-        }
-
-        // ============ DEMO 5: Orders with JOIN ============
-        PrintOrdersWithDetails(db);
-
-        // ============ DEMO 6: Top 5 Parts by Sales (Window Function) ============
-        PrintTop5Parts(db, "2025-03-01", "2025-03-31");
-
-    }
-    else {
+    if (!db.Connect("DESKTOP-OO16Q6Q\\SQLEXPRESS", "ProductionDB")) {
         std::cout << "ERROR! Failed to connect to database." << std::endl;
+        std::cout << "Press Enter to exit..." << std::endl;
+        std::cin.get();
+        return 1;
     }
 
-    std::cout << std::endl << "Press Enter to exit..." << std::endl;
-    std::cin.get();
+    std::cout << "SUCCESS! Connected to database." << std::endl;
+
+    // Авторизация
+    std::cout << "\n========== LOGIN ==========" << std::endl;
+    std::cout << "Available test users:" << std::endl;
+    std::cout << "  - ivanov@company.ru (Administrator)" << std::endl;
+    std::cout << "  - petrova@company.ru (Manager)" << std::endl;
+    std::cout << "  - kozlovam@company.ru (Warehouse Worker)" << std::endl;
+    std::cout << "  - sidorov@company.ru (Accountant)" << std::endl;
+    std::cout << "===========================" << std::endl;
+
+    std::string email;
+    std::cout << "Enter email: ";
+    std::cin >> email;
+
+    if (!auth.Login(db, email)) {
+        std::cout << "Login failed. Exiting..." << std::endl;
+        std::cout << "Press Enter to exit..." << std::endl;
+        std::cin.get();
+        std::cin.get();
+        return 1;
+    }
+
+    int choice;
+    do {
+        ShowMenu();
+        std::cin >> choice;
+
+        switch (choice) {
+        case 1:
+            PrintAllEmployees(db);
+            break;
+        case 2:
+            PrintAllParts(db);
+            break;
+        case 3:
+            PrintOrdersWithDetails(db);
+            break;
+        case 4:
+            if (auth.CanViewReports()) {
+                PrintTop5Parts(db, "2025-03-01", "2025-03-31");
+            }
+            else {
+                std::cout << "Access denied: You don't have permission to view reports!" << std::endl;
+            }
+            break;
+        case 5:
+            if (auth.CanEdit()) {
+                std::cout << "Creating new order (functionality to be implemented)..." << std::endl;
+                // Здесь будет создание заказа
+            }
+            else {
+                std::cout << "Access denied: Only Manager+ can create orders!" << std::endl;
+            }
+            break;
+        case 6:
+            if (auth.CanEdit()) {
+                std::cout << "Adding new part (functionality to be implemented)..." << std::endl;
+                // Здесь будет добавление детали
+            }
+            else {
+                std::cout << "Access denied: Only Manager+ can add parts!" << std::endl;
+            }
+            break;
+        case 7:
+            if (auth.CanDelete()) {
+                std::cout << "Adding new employee (functionality to be implemented)..." << std::endl;
+                // Здесь будет добавление сотрудника
+            }
+            else {
+                std::cout << "Access denied: Only Administrator can add employees!" << std::endl;
+            }
+            break;
+        case 8:
+            if (auth.CanDelete()) {
+                int empId;
+                std::cout << "Enter employee ID to delete: ";
+                std::cin >> empId;
+                Employee emp;
+                if (emp.DeleteWithAuth(db, auth, empId)) {
+                    std::cout << "Employee deleted successfully!" << std::endl;
+                }
+                else {
+                    std::cout << "Failed to delete employee!" << std::endl;
+                }
+            }
+            else {
+                std::cout << "Access denied: Only Administrator can delete employees!" << std::endl;
+            }
+            break;
+        case 0:
+            std::cout << "Goodbye!" << std::endl;
+            break;
+        default:
+            std::cout << "Invalid choice!" << std::endl;
+        }
+    } while (choice != 0);
 
     return 0;
 }

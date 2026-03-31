@@ -25,6 +25,7 @@
     <None Include="04_AuditTriggers.sql" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AuthManager.cpp" />
     <ClCompile Include="DatabaseManager.cpp" />
     <ClCompile Include="Employee.cpp" />
     <ClCompile Include="main.cpp" />
@@ -32,6 +33,7 @@
     <ClCompile Include="Part.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AuthManager.h" />
     <ClInclude Include="DatabaseManager.h" />
     <ClInclude Include="Employee.h" />
     <ClInclude Include="Order.h" />
