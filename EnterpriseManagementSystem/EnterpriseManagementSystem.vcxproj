@@ -28,11 +28,13 @@
     <ClCompile Include="DatabaseManager.cpp" />
     <ClCompile Include="Employee.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Order.cpp" />
     <ClCompile Include="Part.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DatabaseManager.h" />
     <ClInclude Include="Employee.h" />
+    <ClInclude Include="Order.h" />
     <ClInclude Include="Part.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
