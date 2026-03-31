@@ -16,5 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="01_CreateTables.sql" />
+    <None Include="02_AddForeignKeys.sql" />
   </ItemGroup>
 </Project>
