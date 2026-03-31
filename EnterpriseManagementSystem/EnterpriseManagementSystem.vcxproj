@@ -21,6 +21,7 @@
   <ItemGroup>
     <None Include="01_CreateTables.sql" />
     <None Include="02_AddForeignKeys.sql" />
+    <None Include="03_SeedDataAndProcedures.sql" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
