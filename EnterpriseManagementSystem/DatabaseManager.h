@@ -6,8 +6,8 @@
 
 class DatabaseManager {
 private:
-    SQLHENV henv;      // Environment handle
-    SQLHDBC hdbc;      // Connection handle
+    SQLHENV henv;
+    SQLHDBC hdbc;
     bool connected;
 
     void PrintODBCError(SQLHANDLE handle, SQLSMALLINT type);
@@ -16,15 +16,12 @@ public:
     DatabaseManager();
     ~DatabaseManager();
 
-    bool Connect(const std::wstring& server, const std::wstring& database);
+    bool Connect(const std::string& server, const std::string& database);
     void Disconnect();
     bool IsConnected() const { return connected; }
 
     SQLHDBC GetConnection() const { return hdbc; }
 
-    // Выполнение запроса без возврата результата (INSERT, UPDATE, DELETE)
-    bool ExecuteNonQuery(const std::wstring& query);
-
-    // Выполнение запроса с возвратом результата (SELECT)
-    bool ExecuteQuery(const std::wstring& query, SQLHSTMT& hstmt);
+    bool ExecuteNonQuery(const std::string& query);
+    bool ExecuteQuery(const std::string& query, SQLHSTMT& hstmt);
 };

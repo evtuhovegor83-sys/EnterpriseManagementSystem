@@ -1,5 +1,6 @@
 #include "DatabaseManager.h"
 #include <iostream>
+#include <string>
 
 void DatabaseManager::PrintODBCError(SQLHANDLE handle, SQLSMALLINT type) {
     SQLWCHAR sqlState[1024];
@@ -8,7 +9,7 @@ void DatabaseManager::PrintODBCError(SQLHANDLE handle, SQLSMALLINT type) {
     SQLSMALLINT textLength;
 
     if (SQLGetDiagRecW(type, handle, 1, sqlState, &nativeError, message, sizeof(message), &textLength) == SQL_SUCCESS) {
-        std::wcerr << L"ODBC Error: " << message << L" (SQL State: " << sqlState << L")" << std::endl;
+        std::wcerr << L"ODBC Error: " << message << std::endl;
     }
 }
 
@@ -18,42 +19,40 @@ DatabaseManager::~DatabaseManager() {
     Disconnect();
 }
 
-bool DatabaseManager::Connect(const std::wstring& server, const std::wstring& database) {
-    // 1. Выделяем environment handle
+bool DatabaseManager::Connect(const std::string& server, const std::string& database) {
     SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
     if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) {
-        std::cerr << "Ошибка выделения environment handle" << std::endl;
+        std::cerr << "Error allocating environment" << std::endl;
         return false;
     }
 
-    // 2. Устанавливаем версию ODBC 3
     ret = SQLSetEnvAttr(henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)SQL_OV_ODBC3, 0);
     if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) {
-        std::cerr << "Ошибка установки версии ODBC" << std::endl;
+        std::cerr << "Error setting ODBC version" << std::endl;
         SQLFreeHandle(SQL_HANDLE_ENV, henv);
         return false;
     }
 
-    // 3. Выделяем connection handle
     ret = SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc);
     if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) {
-        std::cerr << "Ошибка выделения connection handle" << std::endl;
+        std::cerr << "Error allocating connection" << std::endl;
         SQLFreeHandle(SQL_HANDLE_ENV, henv);
         return false;
     }
 
-    // 4. Формируем строку подключения
-    std::wstring connString = L"DRIVER={ODBC Driver 17 for SQL Server};SERVER=" + server + L";DATABASE=" + database + L";Trusted_Connection=yes;";
+    std::string connString = "DRIVER={ODBC Driver 17 for SQL Server};SERVER=" + server + ";DATABASE=" + database + ";Trusted_Connection=yes;";
 
-    ret = SQLDriverConnectW(hdbc, NULL, (SQLWCHAR*)connString.c_str(), SQL_NTS, NULL, 0, NULL, SQL_DRIVER_COMPLETE);
+    std::wstring wConnString(connString.begin(), connString.end());
+
+    ret = SQLDriverConnectW(hdbc, NULL, (SQLWCHAR*)wConnString.c_str(), SQL_NTS, NULL, 0, NULL, SQL_DRIVER_COMPLETE);
 
     if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
         connected = true;
-        std::wcout << L"Подключено к базе данных: " << database << std::endl;
+        std::cout << "Connected to database: " << database << std::endl;
         return true;
     }
     else {
-        std::cerr << "Ошибка подключения к базе данных" << std::endl;
+        std::cerr << "Connection failed" << std::endl;
         PrintODBCError(hdbc, SQL_HANDLE_DBC);
         SQLFreeHandle(SQL_HANDLE_DBC, hdbc);
         SQLFreeHandle(SQL_HANDLE_ENV, henv);
@@ -74,7 +73,7 @@ void DatabaseManager::Disconnect() {
     connected = false;
 }
 
-bool DatabaseManager::ExecuteNonQuery(const std::wstring& query) {
+bool DatabaseManager::ExecuteNonQuery(const std::string& query) {
     if (!connected) return false;
 
     SQLHSTMT hstmt = NULL;
@@ -83,14 +82,15 @@ bool DatabaseManager::ExecuteNonQuery(const std::wstring& query) {
         return false;
     }
 
-    ret = SQLExecDirectW(hstmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+    std::wstring wQuery(query.begin(), query.end());
+    ret = SQLExecDirectW(hstmt, (SQLWCHAR*)wQuery.c_str(), SQL_NTS);
 
     SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
 
     return (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
 }
 
-bool DatabaseManager::ExecuteQuery(const std::wstring& query, SQLHSTMT& hstmt) {
+bool DatabaseManager::ExecuteQuery(const std::string& query, SQLHSTMT& hstmt) {
     if (!connected) return false;
 
     SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
@@ -98,7 +98,8 @@ bool DatabaseManager::ExecuteQuery(const std::wstring& query, SQLHSTMT& hstmt) {
         return false;
     }
 
-    ret = SQLExecDirectW(hstmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+    std::wstring wQuery(query.begin(), query.end());
+    ret = SQLExecDirectW(hstmt, (SQLWCHAR*)wQuery.c_str(), SQL_NTS);
 
     return (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
 }
