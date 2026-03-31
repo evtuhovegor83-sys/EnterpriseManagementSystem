@@ -203,6 +203,7 @@ void ShowMenu() {
     std::cout << "13. EXPORT: Low stock parts to CSV" << std::endl;
     std::cout << "14. View parts with PAGINATION (OFFSET/FETCH)" << std::endl;
     std::cout << "15. Calculate order total (Bonus function #1)" << std::endl;
+    std::cout << "16. Get employees by department (Bonus function #2)" << std::endl;
     std::cout << "0. Exit" << std::endl;
     std::cout << "Choice: ";
 }
@@ -374,6 +375,45 @@ int main() {
             std::cin >> orderId;
             double total = Order::CalculateOrderTotal(db, orderId);
             std::cout << "Order total: " << total << std::endl;
+        }
+        break;
+        case 16:
+        {
+            int deptId;
+            std::cout << "Enter department ID (1-4): " << std::endl;
+            std::cout << "  1 - Assembly shop" << std::endl;
+            std::cout << "  2 - Warehouse department" << std::endl;
+            std::cout << "  3 - Accounting" << std::endl;
+            std::cout << "  4 - Purchasing department" << std::endl;
+            std::cout << "Choice: ";
+            std::cin >> deptId;
+
+            SQLHSTMT hstmt = NULL;
+            if (Employee::GetEmployeesByDepartment(db, deptId, hstmt)) {
+                std::cout << "\n=== Employees in Department " << deptId << " ===" << std::endl;
+                SQLINTEGER id;
+                char name[100], fname[100], email[100];
+                double salary;
+
+                SQLBindCol(hstmt, 1, SQL_C_SLONG, &id, 0, NULL);
+                SQLBindCol(hstmt, 2, SQL_C_CHAR, name, sizeof(name), NULL);
+                SQLBindCol(hstmt, 3, SQL_C_CHAR, fname, sizeof(fname), NULL);
+                SQLBindCol(hstmt, 4, SQL_C_CHAR, email, sizeof(email), NULL);
+                SQLBindCol(hstmt, 5, SQL_C_DOUBLE, &salary, 0, NULL);
+
+                int count = 0;
+                while (SQLFetch(hstmt) == SQL_SUCCESS) {
+                    std::cout << "ID: " << id << " | " << name << " " << fname
+                        << " | " << email << " | Salary: " << salary << std::endl;
+                    count++;
+                }
+
+                if (count == 0) {
+                    std::cout << "No employees found in this department." << std::endl;
+                }
+
+                SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+            }
         }
         break;
         case 0:

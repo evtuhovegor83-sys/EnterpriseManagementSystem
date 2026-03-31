@@ -55,4 +55,7 @@ public:
     void SetHireDate(const std::string& date);
     bool SetSalary(double salary);
     void SetDepartmentID(int id);
+
+    // Дополнительная функция 2: Получение сотрудников по отделу
+    static bool GetEmployeesByDepartment(DatabaseManager& db, int departmentID, SQLHSTMT& hstmt);
 };

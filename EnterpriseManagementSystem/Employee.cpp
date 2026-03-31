@@ -226,3 +226,13 @@ bool Employee::Search(DatabaseManager& db, const std::string& departmentName, in
 
     return db.ExecuteQuery(ss.str(), hstmt);
 }
+
+bool Employee::GetEmployeesByDepartment(DatabaseManager& db, int departmentID, SQLHSTMT& hstmt) {
+    if (!db.IsConnected()) return false;
+
+    std::stringstream ss;
+    ss << "SELECT EmployeeID, LastName, FirstName, Email, Salary "
+        << "FROM Employees WHERE DepartmentID = " << departmentID;
+
+    return db.ExecuteQuery(ss.str(), hstmt);
+}
