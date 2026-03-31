@@ -1,9 +1,12 @@
 #include <iostream>
+#include <sstream>
+#include <string>
 #include "DatabaseManager.h"
 #include "Employee.h"
 #include "Part.h"
 #include "Order.h"
 #include "AuthManager.h"
+#include "ReportExporter.h"
 
 void PrintAllEmployees(DatabaseManager& db) {
     SQLHSTMT hstmt = NULL;
@@ -115,6 +118,11 @@ void ShowMenu() {
     std::cout << "6. Add new part (requires Manager+)" << std::endl;
     std::cout << "7. Add new employee (requires Admin only)" << std::endl;
     std::cout << "8. Delete employee (requires Admin only)" << std::endl;
+    std::cout << "9. EXPORT: Employees to CSV" << std::endl;
+    std::cout << "10. EXPORT: Parts to CSV" << std::endl;
+    std::cout << "11. EXPORT: Orders report to CSV" << std::endl;
+    std::cout << "12. EXPORT: Top 5 parts to CSV" << std::endl;
+    std::cout << "13. EXPORT: Low stock parts to CSV" << std::endl;
     std::cout << "0. Exit" << std::endl;
     std::cout << "Choice: ";
 }
@@ -186,7 +194,6 @@ int main() {
         case 5:
             if (auth.CanEdit()) {
                 std::cout << "Creating new order (functionality to be implemented)..." << std::endl;
-                // Здесь будет создание заказа
             }
             else {
                 std::cout << "Access denied: Only Manager+ can create orders!" << std::endl;
@@ -195,7 +202,6 @@ int main() {
         case 6:
             if (auth.CanEdit()) {
                 std::cout << "Adding new part (functionality to be implemented)..." << std::endl;
-                // Здесь будет добавление детали
             }
             else {
                 std::cout << "Access denied: Only Manager+ can add parts!" << std::endl;
@@ -204,7 +210,6 @@ int main() {
         case 7:
             if (auth.CanDelete()) {
                 std::cout << "Adding new employee (functionality to be implemented)..." << std::endl;
-                // Здесь будет добавление сотрудника
             }
             else {
                 std::cout << "Access denied: Only Administrator can add employees!" << std::endl;
@@ -227,6 +232,58 @@ int main() {
                 std::cout << "Access denied: Only Administrator can delete employees!" << std::endl;
             }
             break;
+        case 9:
+            if (ReportExporter::ExportEmployeesToCSV(db, "Reports/employees.csv")) {
+                std::cout << "Employees exported to Reports/employees.csv" << std::endl;
+            }
+            else {
+                std::cout << "Failed to export employees!" << std::endl;
+            }
+            break;
+        case 10:
+            if (ReportExporter::ExportPartsToCSV(db, "Reports/parts.csv")) {
+                std::cout << "Parts exported to Reports/parts.csv" << std::endl;
+            }
+            else {
+                std::cout << "Failed to export parts!" << std::endl;
+            }
+            break;
+        case 11:
+            if (ReportExporter::ExportOrdersReportToCSV(db, "Reports/orders.csv")) {
+                std::cout << "Orders exported to Reports/orders.csv" << std::endl;
+            }
+            else {
+                std::cout << "Failed to export orders!" << std::endl;
+            }
+            break;
+        case 12:
+            if (auth.CanViewReports()) {
+                if (ReportExporter::ExportTop5PartsToCSV(db, "2025-03-01", "2025-03-31", "Reports/top5_parts.csv")) {
+                    std::cout << "Top 5 parts exported to Reports/top5_parts.csv" << std::endl;
+                }
+                else {
+                    std::cout << "Failed to export top 5 parts!" << std::endl;
+                }
+            }
+            else {
+                std::cout << "Access denied: You don't have permission to export reports!" << std::endl;
+            }
+            break;
+        case 13:
+        {
+            int threshold;
+            std::cout << "Enter stock threshold (e.g., 100): ";
+            std::cin >> threshold;
+            std::stringstream filename;
+            filename << "Reports/low_stock_" << threshold << ".csv";
+            if (ReportExporter::ExportLowStockToCSV(db, threshold, filename.str())) {
+                std::cout << "Low stock parts exported to " << filename.str() << std::endl;
+            }
+            else {
+                std::cout << "Failed to export low stock parts!" << std::endl;
+            }
+        }
+        break;
         case 0:
             std::cout << "Goodbye!" << std::endl;
             break;

@@ -31,6 +31,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Order.cpp" />
     <ClCompile Include="Part.cpp" />
+    <ClCompile Include="ReportExporter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AuthManager.h" />
@@ -38,6 +39,7 @@
     <ClInclude Include="Employee.h" />
     <ClInclude Include="Order.h" />
     <ClInclude Include="Part.h" />
+    <ClInclude Include="ReportExporter.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
