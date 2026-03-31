@@ -20,4 +20,9 @@
     <None Include="03_SeedDataAndProcedures.sql" />
     <None Include="04_AuditTriggers.sql" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>
