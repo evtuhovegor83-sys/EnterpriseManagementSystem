@@ -98,7 +98,7 @@ bool DatabaseManager::ExecuteQuery(const std::string& query, SQLHSTMT& hstmt) {
         return false;
     }
 
-    // Используем ANSI версию вместо Wide для избежания проблем с кодировкой
+    // Используем ANSI версию вместо Wide для избежания проблем с кодировкой!
     ret = SQLExecDirectA(hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
 
     return (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
