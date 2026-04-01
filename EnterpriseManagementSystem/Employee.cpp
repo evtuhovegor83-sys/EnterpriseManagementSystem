@@ -311,11 +311,12 @@ void Employee::AddNewEmployee(DatabaseManager& db, AuthManager& auth) {
     }
     int roleId = SafeInputInt("¬ведите ID роли: ");
 
-    // ”станавливаем дату приема сегодн€шним числом
+    // ”станавливаем дату приема сегодн€шним числом (исправлено: localtime_s)
     time_t now = time(0);
-    tm* ltm = localtime(&now);
+    tm ltm;
+    localtime_s(&ltm, &now);
     std::stringstream hireDate;
-    hireDate << 1900 + ltm->tm_year << "-" << (1 + ltm->tm_mon) << "-" << ltm->tm_mday;
+    hireDate << 1900 + ltm.tm_year << "-" << (1 + ltm.tm_mon) << "-" << ltm.tm_mday;
     newEmp.SetHireDate(hireDate.str());
 
     if (newEmp.Create(db)) {

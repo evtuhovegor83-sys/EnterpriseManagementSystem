@@ -257,10 +257,12 @@ void Order::CreateNewOrder(DatabaseManager& db, AuthManager& auth) {
     std::cin.ignore();
     std::getline(std::cin, orderDate);
     if (orderDate.empty()) {
+        // Исправлено: localtime_s вместо localtime
         time_t now = time(0);
-        tm* ltm = localtime(&now);
+        tm ltm;
+        localtime_s(&ltm, &now);
         std::stringstream ss;
-        ss << 1900 + ltm->tm_year << "-" << (1 + ltm->tm_mon) << "-" << ltm->tm_mday;
+        ss << 1900 + ltm.tm_year << "-" << (1 + ltm.tm_mon) << "-" << ltm.tm_mday;
         orderDate = ss.str();
     }
 
