@@ -22,6 +22,6 @@ public:
 
     SQLHDBC GetConnection() const { return hdbc; }
 
-    bool ExecuteNonQuery(const std::string& query);
+    bool ExecuteNonQuery(const std::string& query); //заголовочный файл наверное 
     bool ExecuteQuery(const std::string& query, SQLHSTMT& hstmt);
 };
