@@ -60,11 +60,11 @@ public:
     void SetWarehouseID(int id);
     void SetSupplierID(int id);
 
-    // Дополнительная функция 3: Обновление цены с проверкой прав
+    // Дополнительная функция 3: Обновление цены с проверкой прав!
     bool UpdatePriceWithAuth(DatabaseManager& db, AuthManager& auth, int partID, double newPrice);
 
-    // Дополнительная функция 4: Статистика по складу
+    // Дополнительная функция 4: Статистика по складу!
     static void GetWarehouseStatistics(DatabaseManager& db);
-    // Добавление новой детали (интерактивное)
+    // Добавление новой детали (интерактивное)!
     static void AddNewPart(DatabaseManager& db, AuthManager& auth);
 };
