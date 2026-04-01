@@ -320,7 +320,7 @@ void Employee::AddNewEmployee(DatabaseManager& db, AuthManager& auth) {
     newEmp.SetHireDate(hireDate.str());
 
     if (newEmp.Create(db)) {
-        // Получаем ID нового сотрудника
+        // Получаем ID нового сотрудника!
         SQLHSTMT hstmtLast = NULL;
         if (db.ExecuteQuery("SELECT MAX(EmployeeID) FROM Employees", hstmtLast)) {
             int newId = 0;
