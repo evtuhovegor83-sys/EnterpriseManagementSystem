@@ -351,7 +351,7 @@ int main() {
             break;
         case 7:
             if (auth.CanDelete()) {
-                std::cout << "Добавление нового сотрудника (функция будет реализована)..." << std::endl;
+                Employee::AddNewEmployee(db, auth);
             }
             else {
                 std::cout << "Доступ запрещен: только Администратор может добавлять сотрудников!" << std::endl;

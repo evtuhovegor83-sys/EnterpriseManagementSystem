@@ -58,4 +58,6 @@ public:
 
     // Дополнительная функция 2: Получение сотрудников по отделу
     static bool GetEmployeesByDepartment(DatabaseManager& db, int departmentID, SQLHSTMT& hstmt);
+    // Добавление нового сотрудника (интерактивное)
+    static void AddNewEmployee(DatabaseManager& db, AuthManager& auth);
 };

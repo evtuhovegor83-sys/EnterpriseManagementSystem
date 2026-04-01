@@ -3,6 +3,11 @@
 #include <iostream>
 #include <regex>
 #include <sstream>
+#include <ctime>
+
+// Прототипы функций для безопасного ввода (объявлены в main.cpp)
+int SafeInputInt(const std::string& prompt);
+double SafeInputDouble(const std::string& prompt);
 
 bool Employee::ValidateEmail(const std::string& email) {
     std::regex pattern(R"((\w+)(\.\w+)*@(\w+)(\.\w+)+)");
@@ -235,4 +240,113 @@ bool Employee::GetEmployeesByDepartment(DatabaseManager& db, int departmentID, S
         << "FROM Employees WHERE DepartmentID = " << departmentID;
 
     return db.ExecuteQuery(ss.str(), hstmt);
+}
+
+// ============ ДОБАВЛЕНИЕ НОВОГО СОТРУДНИКА ============
+
+void Employee::AddNewEmployee(DatabaseManager& db, AuthManager& auth) {
+    if (!auth.CanDelete()) {
+        std::cout << "Доступ запрещен: Только Администратор может добавлять сотрудников!" << std::endl;
+        return;
+    }
+
+    std::cout << "\n========== ДОБАВЛЕНИЕ НОВОГО СОТРУДНИКА ==========" << std::endl;
+
+    Employee newEmp;
+
+    std::cin.ignore();
+    std::string lastName;
+    std::cout << "Введите фамилию: ";
+    std::getline(std::cin, lastName);
+    if (!newEmp.SetLastName(lastName)) return;
+
+    std::string firstName;
+    std::cout << "Введите имя: ";
+    std::getline(std::cin, firstName);
+    if (!newEmp.SetFirstName(firstName)) return;
+
+    std::string middleName;
+    std::cout << "Введите отчество (Enter - пропустить): ";
+    std::getline(std::cin, middleName);
+    if (!middleName.empty()) newEmp.SetMiddleName(middleName);
+
+    std::string email;
+    std::cout << "Введите email: ";
+    std::getline(std::cin, email);
+    if (!newEmp.SetEmail(email)) return;
+
+    double salary = SafeInputDouble("Введите зарплату: ");
+    if (!newEmp.SetSalary(salary)) return;
+
+    // Показываем доступные отделы
+    SQLHSTMT hstmtDept = NULL;
+    std::string deptQuery = "SELECT DepartmentID, DepartmentName FROM Departments";
+    if (db.ExecuteQuery(deptQuery, hstmtDept)) {
+        std::cout << "\nДоступные отделы:" << std::endl;
+        SQLINTEGER did;
+        char dname[100];
+        SQLBindCol(hstmtDept, 1, SQL_C_SLONG, &did, 0, NULL);
+        SQLBindCol(hstmtDept, 2, SQL_C_CHAR, dname, sizeof(dname), NULL);
+        while (SQLFetch(hstmtDept) == SQL_SUCCESS) {
+            std::cout << "ID: " << did << " | " << dname << std::endl;
+        }
+        SQLFreeHandle(SQL_HANDLE_STMT, hstmtDept);
+    }
+    int deptId = SafeInputInt("Введите ID отдела (0 - без отдела): ");
+    if (deptId != 0) newEmp.SetDepartmentID(deptId);
+
+    // Показываем доступные роли
+    SQLHSTMT hstmtRole = NULL;
+    std::string roleQuery = "SELECT RoleID, RoleName FROM Roles";
+    if (db.ExecuteQuery(roleQuery, hstmtRole)) {
+        std::cout << "\nДоступные роли:" << std::endl;
+        SQLINTEGER rid;
+        char rname[100];
+        SQLBindCol(hstmtRole, 1, SQL_C_SLONG, &rid, 0, NULL);
+        SQLBindCol(hstmtRole, 2, SQL_C_CHAR, rname, sizeof(rname), NULL);
+        while (SQLFetch(hstmtRole) == SQL_SUCCESS) {
+            std::cout << "ID: " << rid << " | " << rname << std::endl;
+        }
+        SQLFreeHandle(SQL_HANDLE_STMT, hstmtRole);
+    }
+    int roleId = SafeInputInt("Введите ID роли: ");
+
+    // Устанавливаем дату приема сегодняшним числом
+    time_t now = time(0);
+    tm* ltm = localtime(&now);
+    std::stringstream hireDate;
+    hireDate << 1900 + ltm->tm_year << "-" << (1 + ltm->tm_mon) << "-" << ltm->tm_mday;
+    newEmp.SetHireDate(hireDate.str());
+
+    if (newEmp.Create(db)) {
+        // Получаем ID нового сотрудника
+        SQLHSTMT hstmtLast = NULL;
+        if (db.ExecuteQuery("SELECT MAX(EmployeeID) FROM Employees", hstmtLast)) {
+            int newId = 0;
+            SQLFetch(hstmtLast);
+            SQLGetData(hstmtLast, 1, SQL_C_SLONG, &newId, sizeof(newId), NULL);
+            SQLFreeHandle(SQL_HANDLE_STMT, hstmtLast);
+
+            if (newId > 0) {
+                std::stringstream roleInsert;
+                roleInsert << "INSERT INTO UserRoles (EmployeeID, RoleID) VALUES (" << newId << ", " << roleId << ")";
+                if (db.ExecuteNonQuery(roleInsert.str())) {
+                    std::cout << "\nСотрудник успешно добавлен!" << std::endl;
+                    std::cout << "ID нового сотрудника: " << newId << std::endl;
+                }
+                else {
+                    std::cout << "\nСотрудник добавлен, но не удалось назначить роль!" << std::endl;
+                }
+            }
+            else {
+                std::cout << "\nСотрудник добавлен!" << std::endl;
+            }
+        }
+        else {
+            std::cout << "\nСотрудник добавлен!" << std::endl;
+        }
+    }
+    else {
+        std::cout << "\nОшибка при добавлении сотрудника!" << std::endl;
+    }
 }
