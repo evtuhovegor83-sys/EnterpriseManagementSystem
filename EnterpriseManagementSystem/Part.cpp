@@ -364,7 +364,7 @@ void Part::AddNewPart(DatabaseManager& db, AuthManager& auth) {
     int warehouseId = SafeInputInt("Введите ID склада (0 - без склада): ");
     if (warehouseId != 0) newPart.SetWarehouseID(warehouseId);
 
-    // Показываем доступных поставщиков
+    // Показываем доступных поставщиков!!
     SQLHSTMT hstmtSupplier = NULL;
     std::string supplierQuery = "SELECT SupplierID, SupplierName FROM Suppliers";
     if (db.ExecuteQuery(supplierQuery, hstmtSupplier)) {
