@@ -3,6 +3,9 @@
 #include <vector>
 #include "DatabaseManager.h"
 
+// Forward declaration для избежания циклической зависимости
+class AuthManager;
+
 struct OrderPartItem {
     int partID;
     int quantity;
@@ -46,4 +49,7 @@ public:
 
     // Дополнительная функция 5: Отмена заказа с возвратом товаров
     bool CancelOrderWithRestore(DatabaseManager& db, int orderID);
+
+    // Создание заказа с выбором деталей (интерактивное)
+    static void CreateNewOrder(DatabaseManager& db, AuthManager& auth);
 };

@@ -27,7 +27,7 @@ Employee::Employee(const std::string& lastName, const std::string& firstName, co
 
 bool Employee::SetLastName(const std::string& name) {
     if (!ValidateName(name)) {
-        std::cerr << "Error: Invalid last name" << std::endl;
+        std::cerr << "Ошибка: Неверная фамилия. Используйте только буквы, длина 2-50 символов." << std::endl;
         return false;
     }
     lastName = name;
@@ -36,7 +36,7 @@ bool Employee::SetLastName(const std::string& name) {
 
 bool Employee::SetFirstName(const std::string& name) {
     if (!ValidateName(name)) {
-        std::cerr << "Error: Invalid first name" << std::endl;
+        std::cerr << "Ошибка: Неверное имя. Используйте только буквы, длина 2-50 символов." << std::endl;
         return false;
     }
     firstName = name;
@@ -45,7 +45,7 @@ bool Employee::SetFirstName(const std::string& name) {
 
 bool Employee::SetMiddleName(const std::string& name) {
     if (!name.empty() && !ValidateName(name)) {
-        std::cerr << "Error: Invalid middle name" << std::endl;
+        std::cerr << "Ошибка: Неверное отчество. Используйте только буквы, длина 2-50 символов." << std::endl;
         return false;
     }
     middleName = name;
@@ -54,7 +54,7 @@ bool Employee::SetMiddleName(const std::string& name) {
 
 bool Employee::SetEmail(const std::string& email) {
     if (!ValidateEmail(email)) {
-        std::cerr << "Error: Invalid email format" << std::endl;
+        std::cerr << "Ошибка: Неверный формат email. Пример: name@company.ru" << std::endl;
         return false;
     }
     this->email = email;
@@ -67,7 +67,7 @@ void Employee::SetHireDate(const std::string& date) {
 
 bool Employee::SetSalary(double salary) {
     if (!ValidateSalary(salary)) {
-        std::cerr << "Error: Salary must be positive" << std::endl;
+        std::cerr << "Ошибка: Зарплата должна быть положительным числом не более 10 000 000." << std::endl;
         return false;
     }
     this->salary = salary;
@@ -194,7 +194,7 @@ bool Employee::Delete(DatabaseManager& db, int id) {
 
 bool Employee::DeleteWithAuth(DatabaseManager& db, AuthManager& auth, int id) {
     if (!auth.CanDelete()) {
-        std::cout << "Access denied: Only Administrator can delete employees!" << std::endl;
+        std::cout << "Доступ запрещен: Только Администратор может удалять сотрудников!" << std::endl;
         return false;
     }
     return Delete(db, id);

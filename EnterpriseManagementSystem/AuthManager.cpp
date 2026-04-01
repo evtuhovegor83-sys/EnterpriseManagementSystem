@@ -16,7 +16,7 @@ bool AuthManager::Login(DatabaseManager& db, const std::string& email) {
         << "WHERE e.Email = '" << email << "'";
 
     if (!db.ExecuteQuery(ss.str(), hstmt)) {
-        std::cout << "Login failed: Query error" << std::endl;
+        std::cout << "Ошибка входа: Ошибка выполнения запроса" << std::endl;
         return false;
     }
 
@@ -35,16 +35,16 @@ bool AuthManager::Login(DatabaseManager& db, const std::string& email) {
         authenticated = true;
 
         std::cout << "\n========================================" << std::endl;
-        std::cout << "  LOGIN SUCCESSFUL!" << std::endl;
-        std::cout << "  User: " << currentUserName << std::endl;
-        std::cout << "  Role: " << GetRoleName(currentRole) << std::endl;
+        std::cout << "  ВХОД ВЫПОЛНЕН УСПЕШНО!" << std::endl;
+        std::cout << "  Пользователь: " << currentUserName << std::endl;
+        std::cout << "  Роль: " << GetRoleName(currentRole) << std::endl;
         std::cout << "========================================" << std::endl;
 
         SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
         return true;
     }
 
-    std::cout << "Login failed: User with email '" << email << "' not found" << std::endl;
+    std::cout << "Ошибка входа: Пользователь с email '" << email << "' не найден" << std::endl;
     SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
     return false;
 }
@@ -54,7 +54,7 @@ void AuthManager::Logout() {
     currentUserID = -1;
     currentUserName = "";
     currentRole = UserRole::WAREHOUSE;
-    std::cout << "Logged out successfully" << std::endl;
+    std::cout << "Выход из системы выполнен успешно" << std::endl;
 }
 
 bool AuthManager::HasPermission(UserRole requiredRole) const {
@@ -87,10 +87,10 @@ bool AuthManager::CanViewReports() const {
 
 std::string AuthManager::GetRoleName(UserRole role) {
     switch (role) {
-    case UserRole::ADMIN:      return "Administrator";
-    case UserRole::MANAGER:    return "Manager";
-    case UserRole::WAREHOUSE:  return "Warehouse Worker";
-    case UserRole::ACCOUNTANT: return "Accountant";
-    default:                   return "Unknown";
+    case UserRole::ADMIN:      return "Администратор";
+    case UserRole::MANAGER:    return "Менеджер";
+    case UserRole::WAREHOUSE:  return "Складской работник";
+    case UserRole::ACCOUNTANT: return "Бухгалтер";
+    default:                   return "Неизвестно";
     }
 }

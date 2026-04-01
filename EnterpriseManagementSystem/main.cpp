@@ -1,6 +1,9 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <cctype>
+#include <windows.h>
+#include <ctime>
 #include "DatabaseManager.h"
 #include "Employee.h"
 #include "Part.h"
@@ -8,10 +11,55 @@
 #include "AuthManager.h"
 #include "ReportExporter.h"
 
+// ============ НАСТРОЙКА КОНСОЛИ ДЛЯ РУССКОГО ЯЗЫКА ============
+void SetupRussianConsole() {
+    SetConsoleCP(1251);
+    SetConsoleOutputCP(1251);
+}
+
+// ============ ФУНКЦИИ ДЛЯ БЕЗОПАСНОГО ВВОДА (БЕСКОНЕЧНЫЕ ПОПЫТКИ) ============
+
+int SafeInputInt(const std::string& prompt) {
+    int value;
+    while (true) {
+        std::cout << prompt;
+        if (std::cin >> value) {
+            std::cin.ignore(10000, '\n');
+            return value;
+        }
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+        std::cout << "Ошибка! Введите целое число." << std::endl;
+    }
+}
+
+double SafeInputDouble(const std::string& prompt) {
+    double value;
+    while (true) {
+        std::cout << prompt;
+        if (std::cin >> value) {
+            std::cin.ignore(10000, '\n');
+            return value;
+        }
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+        std::cout << "Ошибка! Введите число (например, 123.45)." << std::endl;
+    }
+}
+
+std::string SafeInputString(const std::string& prompt) {
+    std::string value;
+    std::cout << prompt;
+    std::getline(std::cin, value);
+    return value;
+}
+
+// ============ ФУНКЦИИ ВЫВОДА ============
+
 void PrintAllEmployees(DatabaseManager& db) {
     SQLHSTMT hstmt = NULL;
     if (Employee::GetAll(db, hstmt)) {
-        std::cout << "\n=== Employee List ===" << std::endl;
+        std::cout << "\n=== Список сотрудников ===" << std::endl;
 
         SQLINTEGER id;
         char lastName[100], firstName[100], email[100];
@@ -25,7 +73,7 @@ void PrintAllEmployees(DatabaseManager& db) {
 
         while (SQLFetch(hstmt) == SQL_SUCCESS) {
             std::cout << "ID: " << id << " | " << lastName << " " << firstName
-                << " | " << email << " | Salary: " << salary << std::endl;
+                << " | " << email << " | Зарплата: " << salary << std::endl;
         }
 
         SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
@@ -35,7 +83,7 @@ void PrintAllEmployees(DatabaseManager& db) {
 void PrintAllParts(DatabaseManager& db) {
     SQLHSTMT hstmt = NULL;
     if (Part::GetAll(db, hstmt)) {
-        std::cout << "\n=== Parts List ===" << std::endl;
+        std::cout << "\n=== Список деталей ===" << std::endl;
 
         SQLINTEGER id, stock;
         char name[100], number[50];
@@ -49,7 +97,7 @@ void PrintAllParts(DatabaseManager& db) {
 
         while (SQLFetch(hstmt) == SQL_SUCCESS) {
             std::cout << "ID: " << id << " | " << name << " | " << number
-                << " | Price: " << price << " | Stock: " << stock << std::endl;
+                << " | Цена: " << price << " | Остаток: " << stock << std::endl;
         }
 
         SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
@@ -59,7 +107,7 @@ void PrintAllParts(DatabaseManager& db) {
 void PrintOrdersWithDetails(DatabaseManager& db) {
     SQLHSTMT hstmt = NULL;
     if (Order::GetAllOrdersWithDetails(db, hstmt)) {
-        std::cout << "\n=== Orders with Details (JOIN query) ===" << std::endl;
+        std::cout << "\n=== Заказы с деталями (JOIN запрос) ===" << std::endl;
 
         SQLINTEGER orderID, totalItems;
         char orderDate[20], status[20], employeeName[100];
@@ -73,9 +121,9 @@ void PrintOrdersWithDetails(DatabaseManager& db) {
         SQLBindCol(hstmt, 6, SQL_C_DOUBLE, &totalAmount, 0, NULL);
 
         while (SQLFetch(hstmt) == SQL_SUCCESS) {
-            std::cout << "OrderID: " << orderID << " | Date: " << orderDate
-                << " | Status: " << status << " | Employee: " << employeeName
-                << " | Items: " << totalItems << " | Amount: " << totalAmount << std::endl;
+            std::cout << "ID заказа: " << orderID << " | Дата: " << orderDate
+                << " | Статус: " << status << " | Сотрудник: " << employeeName
+                << " | Кол-во позиций: " << totalItems << " | Сумма: " << totalAmount << std::endl;
         }
 
         SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
@@ -85,7 +133,7 @@ void PrintOrdersWithDetails(DatabaseManager& db) {
 void PrintTop5Parts(DatabaseManager& db, const std::string& startDate, const std::string& endDate) {
     SQLHSTMT hstmt = NULL;
     if (Order::GetTop5PartsBySales(db, startDate, endDate, hstmt)) {
-        std::cout << "\n=== Top 5 Parts by Sales (" << startDate << " - " << endDate << ") ===" << std::endl;
+        std::cout << "\n=== Топ-5 деталей по продажам (" << startDate << " - " << endDate << ") ===" << std::endl;
 
         SQLINTEGER partID, totalSold;
         char partName[100], partNumber[50];
@@ -98,8 +146,8 @@ void PrintTop5Parts(DatabaseManager& db, const std::string& startDate, const std
         SQLBindCol(hstmt, 5, SQL_C_DOUBLE, &totalRevenue, 0, NULL);
 
         while (SQLFetch(hstmt) == SQL_SUCCESS) {
-            std::cout << "ID: " << partID << " | " << partName << " | Sold: " << totalSold
-                << " | Revenue: " << totalRevenue << std::endl;
+            std::cout << "ID: " << partID << " | " << partName << " | Продано: " << totalSold
+                << " | Выручка: " << totalRevenue << std::endl;
         }
 
         SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
@@ -112,7 +160,7 @@ void PrintPartsPaginated(DatabaseManager& db) {
     int totalCount = Part::GetPartsTotalCount(db);
 
     if (totalCount == 0) {
-        std::cout << "No parts found in database!" << std::endl;
+        std::cout << "Детали не найдены в базе данных!" << std::endl;
         return;
     }
 
@@ -122,7 +170,7 @@ void PrintPartsPaginated(DatabaseManager& db) {
     do {
         SQLHSTMT hstmt = NULL;
         if (Part::GetPartsPaginated(db, currentPage, pageSize, hstmt)) {
-            std::cout << "\n=== Parts List - Page " << currentPage << " of " << totalPages << " (Total: " << totalCount << " parts) ===" << std::endl;
+            std::cout << "\n=== Список деталей - Страница " << currentPage << " из " << totalPages << " (Всего: " << totalCount << " деталей) ===" << std::endl;
             std::cout << "----------------------------------------------------------------" << std::endl;
 
             SQLINTEGER id, stock;
@@ -138,47 +186,48 @@ void PrintPartsPaginated(DatabaseManager& db) {
             int rowCount = 0;
             while (SQLFetch(hstmt) == SQL_SUCCESS) {
                 std::cout << "ID: " << id << " | " << name << " | " << number
-                    << " | Price: " << price << " | Stock: " << stock << std::endl;
+                    << " | Цена: " << price << " | Остаток: " << stock << std::endl;
                 rowCount++;
             }
 
             if (rowCount == 0) {
-                std::cout << "No parts found on this page." << std::endl;
+                std::cout << "На этой странице нет деталей." << std::endl;
             }
 
             std::cout << "----------------------------------------------------------------" << std::endl;
             SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
         }
 
-        std::cout << "\n[N]ext page | [P]revious page | [F]irst page | [L]ast page | [Q]uit: ";
+        std::cout << "\n[С]ледующая страница | [П]редыдущая страница | [Н]ачало | [К]онец | [В]ыход: ";
         char choice;
         std::cin >> choice;
+        choice = static_cast<char>(toupper(choice));
 
-        if (choice == 'N' || choice == 'n') {
+        if (choice == 'С') {
             if (currentPage < totalPages) {
                 currentPage++;
             }
             else {
-                std::cout << "You are on the last page!" << std::endl;
+                std::cout << "Вы на последней странице!" << std::endl;
             }
         }
-        else if (choice == 'P' || choice == 'p') {
+        else if (choice == 'П') {
             if (currentPage > 1) {
                 currentPage--;
             }
             else {
-                std::cout << "You are on the first page!" << std::endl;
+                std::cout << "Вы на первой странице!" << std::endl;
             }
         }
-        else if (choice == 'F' || choice == 'f') {
+        else if (choice == 'Н') {
             currentPage = 1;
-            std::cout << "Jumped to first page!" << std::endl;
+            std::cout << "Переход на первую страницу!" << std::endl;
         }
-        else if (choice == 'L' || choice == 'l') {
+        else if (choice == 'К') {
             currentPage = totalPages;
-            std::cout << "Jumped to last page!" << std::endl;
+            std::cout << "Переход на последнюю страницу!" << std::endl;
         }
-        else if (choice == 'Q' || choice == 'q') {
+        else if (choice == 'В') {
             break;
         }
     } while (true);
@@ -186,36 +235,62 @@ void PrintPartsPaginated(DatabaseManager& db) {
 
 void ShowMenu() {
     std::cout << "\n========================================" << std::endl;
-    std::cout << "  MAIN MENU" << std::endl;
+    std::cout << "  ГЛАВНОЕ МЕНЮ" << std::endl;
     std::cout << "========================================" << std::endl;
-    std::cout << "1. View all employees" << std::endl;
-    std::cout << "2. View all parts" << std::endl;
-    std::cout << "3. View orders with details" << std::endl;
-    std::cout << "4. View top 5 parts by sales" << std::endl;
-    std::cout << "5. Create new order (requires Manager+)" << std::endl;
-    std::cout << "6. Add new part (requires Manager+)" << std::endl;
-    std::cout << "7. Add new employee (requires Admin only)" << std::endl;
-    std::cout << "8. Delete employee (requires Admin only)" << std::endl;
-    std::cout << "9. EXPORT: Employees to CSV" << std::endl;
-    std::cout << "10. EXPORT: Parts to CSV" << std::endl;
-    std::cout << "11. EXPORT: Orders report to CSV" << std::endl;
-    std::cout << "12. EXPORT: Top 5 parts to CSV" << std::endl;
-    std::cout << "13. EXPORT: Low stock parts to CSV" << std::endl;
-    std::cout << "14. View parts with PAGINATION (OFFSET/FETCH)" << std::endl;
-    std::cout << "15. Calculate order total (Bonus function #1)" << std::endl;
-    std::cout << "16. Get employees by department (Bonus function #2)" << std::endl;
-    std::cout << "17. Update part price with auth (Bonus function #3)" << std::endl;
-    std::cout << "18. Warehouse statistics (Bonus function #4)" << std::endl;
-    std::cout << "19. Cancel order with restore (Bonus function #5)" << std::endl;
-    std::cout << "0. Exit" << std::endl;
-    std::cout << "Choice: ";
+    std::cout << "1. Просмотр всех сотрудников" << std::endl;
+    std::cout << "2. Просмотр всех деталей" << std::endl;
+    std::cout << "3. Просмотр заказов с деталями" << std::endl;
+    std::cout << "4. Просмотр топ-5 деталей по продажам" << std::endl;
+    std::cout << "5. Создать новый заказ (требуется Менеджер+)" << std::endl;
+    std::cout << "6. Добавить новую деталь (требуется Менеджер+)" << std::endl;
+    std::cout << "7. Добавить нового сотрудника (только Админ)" << std::endl;
+    std::cout << "8. Удалить сотрудника (только Админ)" << std::endl;
+    std::cout << "9. ЭКСПОРТ: Сотрудники в CSV" << std::endl;
+    std::cout << "10. ЭКСПОРТ: Детали в CSV" << std::endl;
+    std::cout << "11. ЭКСПОРТ: Отчет по заказам в CSV" << std::endl;
+    std::cout << "12. ЭКСПОРТ: Топ-5 деталей в CSV" << std::endl;
+    std::cout << "13. ЭКСПОРТ: Детали с низким остатком в CSV" << std::endl;
+    std::cout << "14. Просмотр деталей с постраничной навигацией (OFFSET/FETCH)" << std::endl;
+    std::cout << "15. Рассчитать общую стоимость заказа (Бонус #1)" << std::endl;
+    std::cout << "16. Получить сотрудников по отделу (Бонус #2)" << std::endl;
+    std::cout << "17. Обновить цену детали (требуется Менеджер+) (Бонус #3)" << std::endl;
+    std::cout << "18. Статистика по складам (Бонус #4)" << std::endl;
+    std::cout << "19. Отменить заказ с возвратом товаров (Бонус #5)" << std::endl;
+    std::cout << "0. Выход" << std::endl;
+}
+
+// ============ ФУНКЦИЯ АВТОРИЗАЦИИ (БЕСКОНЕЧНЫЕ ПОПЫТКИ) ============
+bool LoginWithRetry(DatabaseManager& db, AuthManager& auth) {
+    std::cout << "\n========== ВХОД В СИСТЕМУ ==========" << std::endl;
+    std::cout << "Доступные тестовые пользователи:" << std::endl;
+    std::cout << "  - ivanov@company.ru (Администратор)" << std::endl;
+    std::cout << "  - petrova@company.ru (Менеджер)" << std::endl;
+    std::cout << "  - kozlovam@company.ru (Складской работник)" << std::endl;
+    std::cout << "  - sidorov@company.ru (Бухгалтер)" << std::endl;
+    std::cout << "===================================" << std::endl;
+
+    while (true) {
+        std::cout << "\nВведите email: ";
+        std::string email;
+        std::cin >> email;
+        std::cin.ignore(10000, '\n');
+
+        if (auth.Login(db, email)) {
+            return true;
+        }
+
+        std::cout << "Ошибка: Пользователь с email '" << email << "' не найден." << std::endl;
+        std::cout << "Попробуйте еще раз." << std::endl;
+    }
 }
 
 int main() {
+    SetupRussianConsole();
     setlocale(LC_ALL, "ru");
 
     std::cout << "========================================" << std::endl;
     std::cout << "  Enterprise Management System v1.0" << std::endl;
+    std::cout << "  Система управления предприятием" << std::endl;
     std::cout << "========================================" << std::endl;
     std::cout << std::endl;
 
@@ -223,39 +298,22 @@ int main() {
     AuthManager auth;
 
     if (!db.Connect("DESKTOP-OO16Q6Q\\SQLEXPRESS", "ProductionDB")) {
-        std::cout << "ERROR! Failed to connect to database." << std::endl;
-        std::cout << "Press Enter to exit..." << std::endl;
+        std::cout << "ОШИБКА! Не удалось подключиться к базе данных." << std::endl;
+        std::cout << "Нажмите Enter для выхода..." << std::endl;
         std::cin.get();
         return 1;
     }
 
-    std::cout << "SUCCESS! Connected to database." << std::endl;
+    std::cout << "УСПЕШНО! Подключение к базе данных установлено." << std::endl;
 
-    // Авторизация
-    std::cout << "\n========== LOGIN ==========" << std::endl;
-    std::cout << "Available test users:" << std::endl;
-    std::cout << "  - ivanov@company.ru (Administrator)" << std::endl;
-    std::cout << "  - petrova@company.ru (Manager)" << std::endl;
-    std::cout << "  - kozlovam@company.ru (Warehouse Worker)" << std::endl;
-    std::cout << "  - sidorov@company.ru (Accountant)" << std::endl;
-    std::cout << "===========================" << std::endl;
-
-    std::string email;
-    std::cout << "Enter email: ";
-    std::cin >> email;
-
-    if (!auth.Login(db, email)) {
-        std::cout << "Login failed. Exiting..." << std::endl;
-        std::cout << "Press Enter to exit..." << std::endl;
-        std::cin.get();
-        std::cin.get();
+    if (!LoginWithRetry(db, auth)) {
         return 1;
     }
 
     int choice;
     do {
         ShowMenu();
-        std::cin >> choice;
+        choice = SafeInputInt("Выберите пункт меню: ");
 
         switch (choice) {
         case 1:
@@ -272,99 +330,95 @@ int main() {
                 PrintTop5Parts(db, "2025-03-01", "2025-03-31");
             }
             else {
-                std::cout << "Access denied: You don't have permission to view reports!" << std::endl;
+                std::cout << "Доступ запрещен: у вас нет прав для просмотра отчетов!" << std::endl;
             }
             break;
         case 5:
             if (auth.CanEdit()) {
-                std::cout << "Creating new order (functionality to be implemented)..." << std::endl;
+                Order::CreateNewOrder(db, auth);
             }
             else {
-                std::cout << "Access denied: Only Manager+ can create orders!" << std::endl;
+                std::cout << "Доступ запрещен: только Менеджер+ может создавать заказы!" << std::endl;
             }
             break;
         case 6:
             if (auth.CanEdit()) {
-                std::cout << "Adding new part (functionality to be implemented)..." << std::endl;
+                std::cout << "Добавление новой детали (функция будет реализована)..." << std::endl;
             }
             else {
-                std::cout << "Access denied: Only Manager+ can add parts!" << std::endl;
+                std::cout << "Доступ запрещен: только Менеджер+ может добавлять детали!" << std::endl;
             }
             break;
         case 7:
             if (auth.CanDelete()) {
-                std::cout << "Adding new employee (functionality to be implemented)..." << std::endl;
+                std::cout << "Добавление нового сотрудника (функция будет реализована)..." << std::endl;
             }
             else {
-                std::cout << "Access denied: Only Administrator can add employees!" << std::endl;
+                std::cout << "Доступ запрещен: только Администратор может добавлять сотрудников!" << std::endl;
             }
             break;
         case 8:
             if (auth.CanDelete()) {
-                int empId;
-                std::cout << "Enter employee ID to delete: ";
-                std::cin >> empId;
+                int empId = SafeInputInt("Введите ID сотрудника для удаления: ");
                 Employee emp;
                 if (emp.DeleteWithAuth(db, auth, empId)) {
-                    std::cout << "Employee deleted successfully!" << std::endl;
+                    std::cout << "Сотрудник успешно удален!" << std::endl;
                 }
                 else {
-                    std::cout << "Failed to delete employee!" << std::endl;
+                    std::cout << "Не удалось удалить сотрудника!" << std::endl;
                 }
             }
             else {
-                std::cout << "Access denied: Only Administrator can delete employees!" << std::endl;
+                std::cout << "Доступ запрещен: только Администратор может удалять сотрудников!" << std::endl;
             }
             break;
         case 9:
             if (ReportExporter::ExportEmployeesToCSV(db, "Reports/employees.csv")) {
-                std::cout << "Employees exported to Reports/employees.csv" << std::endl;
+                std::cout << "Сотрудники экспортированы в Reports/employees.csv" << std::endl;
             }
             else {
-                std::cout << "Failed to export employees!" << std::endl;
+                std::cout << "Не удалось экспортировать сотрудников!" << std::endl;
             }
             break;
         case 10:
             if (ReportExporter::ExportPartsToCSV(db, "Reports/parts.csv")) {
-                std::cout << "Parts exported to Reports/parts.csv" << std::endl;
+                std::cout << "Детали экспортированы в Reports/parts.csv" << std::endl;
             }
             else {
-                std::cout << "Failed to export parts!" << std::endl;
+                std::cout << "Не удалось экспортировать детали!" << std::endl;
             }
             break;
         case 11:
             if (ReportExporter::ExportOrdersReportToCSV(db, "Reports/orders.csv")) {
-                std::cout << "Orders exported to Reports/orders.csv" << std::endl;
+                std::cout << "Заказы экспортированы в Reports/orders.csv" << std::endl;
             }
             else {
-                std::cout << "Failed to export orders!" << std::endl;
+                std::cout << "Не удалось экспортировать заказы!" << std::endl;
             }
             break;
         case 12:
             if (auth.CanViewReports()) {
                 if (ReportExporter::ExportTop5PartsToCSV(db, "2025-03-01", "2025-03-31", "Reports/top5_parts.csv")) {
-                    std::cout << "Top 5 parts exported to Reports/top5_parts.csv" << std::endl;
+                    std::cout << "Топ-5 деталей экспортированы в Reports/top5_parts.csv" << std::endl;
                 }
                 else {
-                    std::cout << "Failed to export top 5 parts!" << std::endl;
+                    std::cout << "Не удалось экспортировать топ-5 деталей!" << std::endl;
                 }
             }
             else {
-                std::cout << "Access denied: You don't have permission to export reports!" << std::endl;
+                std::cout << "Доступ запрещен: у вас нет прав для экспорта отчетов!" << std::endl;
             }
             break;
         case 13:
         {
-            int threshold;
-            std::cout << "Enter stock threshold (e.g., 100): ";
-            std::cin >> threshold;
+            int threshold = SafeInputInt("Введите порог остатка (например, 100): ");
             std::stringstream filename;
             filename << "Reports/low_stock_" << threshold << ".csv";
             if (ReportExporter::ExportLowStockToCSV(db, threshold, filename.str())) {
-                std::cout << "Low stock parts exported to " << filename.str() << std::endl;
+                std::cout << "Детали с низким остатком экспортированы в " << filename.str() << std::endl;
             }
             else {
-                std::cout << "Failed to export low stock parts!" << std::endl;
+                std::cout << "Не удалось экспортировать детали с низким остатком!" << std::endl;
             }
         }
         break;
@@ -373,27 +427,28 @@ int main() {
             break;
         case 15:
         {
-            int orderId;
-            std::cout << "Enter order ID: ";
-            std::cin >> orderId;
+            int orderId = SafeInputInt("Введите ID заказа: ");
             double total = Order::CalculateOrderTotal(db, orderId);
-            std::cout << "Order total: " << total << std::endl;
+            std::cout << "Общая стоимость заказа: " << total << std::endl;
         }
         break;
         case 16:
         {
-            int deptId;
-            std::cout << "Enter department ID (1-4): " << std::endl;
-            std::cout << "  1 - Assembly shop" << std::endl;
-            std::cout << "  2 - Warehouse department" << std::endl;
-            std::cout << "  3 - Accounting" << std::endl;
-            std::cout << "  4 - Purchasing department" << std::endl;
-            std::cout << "Choice: ";
-            std::cin >> deptId;
+            std::cout << "\nВарианты отделов:" << std::endl;
+            std::cout << "  1 - Сборочный цех" << std::endl;
+            std::cout << "  2 - Складской отдел" << std::endl;
+            std::cout << "  3 - Бухгалтерия" << std::endl;
+            std::cout << "  4 - Отдел закупок" << std::endl;
+            int deptId = SafeInputInt("Введите ID отдела (1-4): ");
+
+            if (deptId < 1 || deptId > 4) {
+                std::cout << "Неверный ID отдела! Введите число от 1 до 4." << std::endl;
+                break;
+            }
 
             SQLHSTMT hstmt = NULL;
             if (Employee::GetEmployeesByDepartment(db, deptId, hstmt)) {
-                std::cout << "\n=== Employees in Department " << deptId << " ===" << std::endl;
+                std::cout << "\n=== Сотрудники отдела " << deptId << " ===" << std::endl;
                 SQLINTEGER id;
                 char name[100], fname[100], email[100];
                 double salary;
@@ -407,12 +462,12 @@ int main() {
                 int count = 0;
                 while (SQLFetch(hstmt) == SQL_SUCCESS) {
                     std::cout << "ID: " << id << " | " << name << " " << fname
-                        << " | " << email << " | Salary: " << salary << std::endl;
+                        << " | " << email << " | Зарплата: " << salary << std::endl;
                     count++;
                 }
 
                 if (count == 0) {
-                    std::cout << "No employees found in this department." << std::endl;
+                    std::cout << "В этом отделе нет сотрудников." << std::endl;
                 }
 
                 SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
@@ -421,10 +476,9 @@ int main() {
         break;
         case 17:
         {
-            // Сначала покажем список деталей
             SQLHSTMT hstmtParts = NULL;
             if (Part::GetAll(db, hstmtParts)) {
-                std::cout << "\n=== Available Parts ===" << std::endl;
+                std::cout << "\n=== Доступные детали ===" << std::endl;
                 SQLINTEGER pid, pstock;
                 char pname[100], pnumber[50];
                 double pprice;
@@ -436,17 +490,13 @@ int main() {
                 SQLBindCol(hstmtParts, 5, SQL_C_SLONG, &pstock, 0, NULL);
 
                 while (SQLFetch(hstmtParts) == SQL_SUCCESS) {
-                    std::cout << "ID: " << pid << " | " << pname << " | Price: " << pprice << std::endl;
+                    std::cout << "ID: " << pid << " | " << pname << " | Цена: " << pprice << std::endl;
                 }
                 SQLFreeHandle(SQL_HANDLE_STMT, hstmtParts);
             }
 
-            int partId;
-            double newPrice;
-            std::cout << "\nEnter part ID to update price: ";
-            std::cin >> partId;
-            std::cout << "Enter new price: ";
-            std::cin >> newPrice;
+            int partId = SafeInputInt("\nВведите ID детали для обновления цены: ");
+            double newPrice = SafeInputDouble("Введите новую цену: ");
 
             Part p;
             p.UpdatePriceWithAuth(db, auth, partId, newPrice);
@@ -457,36 +507,38 @@ int main() {
             break;
         case 19:
         {
-            // Сначала покажем список активных заказов
             SQLHSTMT hstmtOrders = NULL;
             std::string activeQuery = "SELECT OrderID, OrderDate, Status FROM Orders WHERE Status != 'Cancelled' AND Status != 'Выполнен' AND Status != 'Completed'";
             if (db.ExecuteQuery(activeQuery, hstmtOrders)) {
-                std::cout << "\n=== Active Orders ===" << std::endl;
+                std::cout << "\n=== Активные заказы ===" << std::endl;
                 SQLINTEGER oid;
                 char odate[20], ostatus[20];
                 SQLBindCol(hstmtOrders, 1, SQL_C_SLONG, &oid, 0, NULL);
                 SQLBindCol(hstmtOrders, 2, SQL_C_CHAR, odate, sizeof(odate), NULL);
                 SQLBindCol(hstmtOrders, 3, SQL_C_CHAR, ostatus, sizeof(ostatus), NULL);
 
+                int count = 0;
                 while (SQLFetch(hstmtOrders) == SQL_SUCCESS) {
-                    std::cout << "ID: " << oid << " | Date: " << odate << " | Status: " << ostatus << std::endl;
+                    std::cout << "ID: " << oid << " | Дата: " << odate << " | Статус: " << ostatus << std::endl;
+                    count++;
+                }
+
+                if (count == 0) {
+                    std::cout << "Активных заказов не найдено." << std::endl;
                 }
                 SQLFreeHandle(SQL_HANDLE_STMT, hstmtOrders);
             }
 
-            int orderId;
-            std::cout << "\nEnter order ID to cancel: ";
-            std::cin >> orderId;
-
+            int orderId = SafeInputInt("\nВведите ID заказа для отмены: ");
             Order o;
             o.CancelOrderWithRestore(db, orderId);
         }
         break;
         case 0:
-            std::cout << "Goodbye!" << std::endl;
+            std::cout << "До свидания!" << std::endl;
             break;
         default:
-            std::cout << "Invalid choice!" << std::endl;
+            std::cout << "Неверный выбор! Пожалуйста, введите число от 0 до 19." << std::endl;
         }
     } while (choice != 0);
 

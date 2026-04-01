@@ -25,7 +25,7 @@ Part::Part(const std::string& partName, const std::string& partNumber, double pr
 
 bool Part::SetPartName(const std::string& name) {
     if (!ValidatePartName(name)) {
-        std::cerr << "Error: Invalid part name" << std::endl;
+        std::cerr << "Ошибка: Неверное название детали" << std::endl;
         return false;
     }
     partName = name;
@@ -34,7 +34,7 @@ bool Part::SetPartName(const std::string& name) {
 
 bool Part::SetPartNumber(const std::string& number) {
     if (number.empty()) {
-        std::cerr << "Error: Part number cannot be empty" << std::endl;
+        std::cerr << "Ошибка: Артикул детали не может быть пустым" << std::endl;
         return false;
     }
     partNumber = number;
@@ -43,7 +43,7 @@ bool Part::SetPartNumber(const std::string& number) {
 
 bool Part::SetPrice(double price) {
     if (!ValidatePrice(price)) {
-        std::cerr << "Error: Price must be between 0 and 10,000,000" << std::endl;
+        std::cerr << "Ошибка: Цена должна быть от 0 до 10 000 000" << std::endl;
         return false;
     }
     this->price = price;
@@ -52,7 +52,7 @@ bool Part::SetPrice(double price) {
 
 bool Part::SetStockQuantity(int quantity) {
     if (!ValidateStockQuantity(quantity)) {
-        std::cerr << "Error: Stock quantity cannot be negative" << std::endl;
+        std::cerr << "Ошибка: Количество на складе не может быть отрицательным" << std::endl;
         return false;
     }
     stockQuantity = quantity;
@@ -240,12 +240,12 @@ int Part::GetPartsTotalCount(DatabaseManager& db) {
 
 bool Part::UpdatePriceWithAuth(DatabaseManager& db, AuthManager& auth, int partID, double newPrice) {
     if (!auth.CanEdit()) {
-        std::cout << "Access denied: Only Manager+ can update prices!" << std::endl;
+        std::cout << "Доступ запрещен: Только Менеджер+ может обновлять цены!" << std::endl;
         return false;
     }
 
     if (!ValidatePrice(newPrice)) {
-        std::cerr << "Error: Invalid price value! Price must be between 0 and 10,000,000" << std::endl;
+        std::cerr << "Ошибка: Неверное значение цены! Цена должна быть от 0 до 10 000 000" << std::endl;
         return false;
     }
 
@@ -254,10 +254,10 @@ bool Part::UpdatePriceWithAuth(DatabaseManager& db, AuthManager& auth, int partI
 
     bool result = db.ExecuteNonQuery(ss.str());
     if (result) {
-        std::cout << "Price updated successfully!" << std::endl;
+        std::cout << "Цена успешно обновлена!" << std::endl;
     }
     else {
-        std::cout << "Failed to update price!" << std::endl;
+        std::cout << "Не удалось обновить цену!" << std::endl;
     }
 
     return result;
@@ -280,7 +280,7 @@ void Part::GetWarehouseStatistics(DatabaseManager& db) {
 
     if (db.ExecuteQuery(query, hstmt)) {
         std::cout << "\n========================================" << std::endl;
-        std::cout << "     WAREHOUSE STATISTICS" << std::endl;
+        std::cout << "     СТАТИСТИКА ПО СКЛАДАМ" << std::endl;
         std::cout << "========================================" << std::endl;
 
         char warehouseName[100];
@@ -294,15 +294,15 @@ void Part::GetWarehouseStatistics(DatabaseManager& db) {
 
         int rowCount = 0;
         while (SQLFetch(hstmt) == SQL_SUCCESS) {
-            std::cout << "\nWarehouse: " << warehouseName << std::endl;
-            std::cout << "  ├─ Unique parts: " << totalParts << std::endl;
-            std::cout << "  ├─ Total items:  " << totalItems << std::endl;
-            std::cout << "  └─ Total value:  " << totalValue << " RUB" << std::endl;
+            std::cout << "\nСклад: " << warehouseName << std::endl;
+            std::cout << "  ├─ Уникальных деталей: " << totalParts << std::endl;
+            std::cout << "  ├─ Всего единиц:      " << totalItems << std::endl;
+            std::cout << "  └─ Общая стоимость:   " << totalValue << " RUB" << std::endl;
             rowCount++;
         }
 
         if (rowCount == 0) {
-            std::cout << "No warehouse data found." << std::endl;
+            std::cout << "Данные по складам не найдены." << std::endl;
         }
 
         std::cout << "\n========================================" << std::endl;
@@ -310,6 +310,6 @@ void Part::GetWarehouseStatistics(DatabaseManager& db) {
         SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
     }
     else {
-        std::cout << "Failed to retrieve warehouse statistics!" << std::endl;
+        std::cout << "Не удалось получить статистику по складам!" << std::endl;
     }
 }

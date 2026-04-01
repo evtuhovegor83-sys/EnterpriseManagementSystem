@@ -1,6 +1,12 @@
 #include "Order.h"
+#include "Part.h"
+#include "AuthManager.h"
 #include <iostream>
 #include <sstream>
+#include <ctime>
+
+// Прототип функции для безопасного ввода (объявлена в main.cpp)
+int SafeInputInt(const std::string& prompt);
 
 Order::Order() : orderID(-1), employeeID(-1), status("") {}
 
@@ -13,7 +19,7 @@ bool Order::CreateWithProcedure(DatabaseManager& db, int employeeID, const std::
 
     // Ограничиваем до 3 деталей (как в нашей хранимой процедуре)
     if (items.empty() || items.size() > 3) {
-        std::cerr << "Error: Order must contain between 1 and 3 parts" << std::endl;
+        std::cerr << "Ошибка: Заказ должен содержать от 1 до 3 деталей" << std::endl;
         return false;
     }
 
@@ -37,7 +43,8 @@ bool Order::CreateWithProcedure(DatabaseManager& db, int employeeID, const std::
     }
     ss << ")}";
 
-    std::cout << "Executing: " << ss.str() << std::endl;
+    std::string query = ss.str();
+    std::cout << "Выполнение: " << query << std::endl;
 
     SQLHSTMT hstmt = NULL;
     SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, db.GetConnection(), &hstmt);
@@ -45,8 +52,8 @@ bool Order::CreateWithProcedure(DatabaseManager& db, int employeeID, const std::
         return false;
     }
 
-    std::wstring wQuery(ss.str().begin(), ss.str().end());
-    ret = SQLExecDirectW(hstmt, (SQLWCHAR*)wQuery.c_str(), SQL_NTS);
+    // Используем ANSI версию вместо Wide
+    ret = SQLExecDirectA(hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
 
     if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
         // Получаем результат
@@ -58,7 +65,7 @@ bool Order::CreateWithProcedure(DatabaseManager& db, int employeeID, const std::
 
         if (SQLFetch(hstmt) == SQL_SUCCESS) {
             orderID = resultOrderID;
-            std::cout << "Result: " << message << " (OrderID=" << orderID << ")" << std::endl;
+            std::cout << "Результат: " << message << " (ID заказа=" << orderID << ")" << std::endl;
         }
 
         SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
@@ -94,13 +101,15 @@ bool Order::GetTop5PartsBySales(DatabaseManager& db, const std::string& startDat
     std::stringstream ss;
     ss << "{CALL sp_Top5PartsBySales('" << startDate << "', '" << endDate << "')}";
 
+    std::string query = ss.str();
+
     SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, db.GetConnection(), &hstmt);
     if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) {
         return false;
     }
 
-    std::wstring wQuery(ss.str().begin(), ss.str().end());
-    ret = SQLExecDirectW(hstmt, (SQLWCHAR*)wQuery.c_str(), SQL_NTS);
+    // Используем ANSI версию вместо Wide
+    ret = SQLExecDirectA(hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
 
     return (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
 }
@@ -156,14 +165,14 @@ bool Order::CancelOrderWithRestore(DatabaseManager& db, int orderID) {
     checkQuery << "SELECT Status FROM Orders WHERE OrderID = " << orderID;
 
     if (!db.ExecuteQuery(checkQuery.str(), hstmtCheck)) {
-        std::cout << "Failed to check order status!" << std::endl;
+        std::cout << "Не удалось проверить статус заказа!" << std::endl;
         return false;
     }
 
     char status[20];
     SQLRETURN ret = SQLFetch(hstmtCheck);
     if (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO) {
-        std::cout << "Order not found!" << std::endl;
+        std::cout << "Заказ не найден!" << std::endl;
         SQLFreeHandle(SQL_HANDLE_STMT, hstmtCheck);
         return false;
     }
@@ -174,12 +183,12 @@ bool Order::CancelOrderWithRestore(DatabaseManager& db, int orderID) {
     std::string statusStr(status);
 
     if (statusStr == "Cancelled" || statusStr == "Отменен") {
-        std::cout << "Order is already cancelled!" << std::endl;
+        std::cout << "Заказ уже отменен!" << std::endl;
         return false;
     }
 
     if (statusStr == "Completed" || statusStr == "Выполнен") {
-        std::cout << "Cannot cancel completed order!" << std::endl;
+        std::cout << "Нельзя отменить выполненный заказ!" << std::endl;
         return false;
     }
 
@@ -191,19 +200,115 @@ bool Order::CancelOrderWithRestore(DatabaseManager& db, int orderID) {
         << "WHERE op.OrderID = " << orderID;
 
     if (!db.ExecuteNonQuery(restoreQuery.str())) {
-        std::cout << "Failed to restore stock!" << std::endl;
+        std::cout << "Не удалось вернуть товары на склад!" << std::endl;
         return false;
     }
 
     // Обновляем статус
     std::stringstream updateQuery;
-    updateQuery << "UPDATE Orders SET Status = 'Cancelled' WHERE OrderID = " << orderID;
+    updateQuery << "UPDATE Orders SET Status = 'Отменен' WHERE OrderID = " << orderID;
 
     if (!db.ExecuteNonQuery(updateQuery.str())) {
-        std::cout << "Failed to update order status!" << std::endl;
+        std::cout << "Не удалось обновить статус заказа!" << std::endl;
         return false;
     }
 
-    std::cout << "Order #" << orderID << " cancelled and stock restored successfully!" << std::endl;
+    std::cout << "Заказ #" << orderID << " отменен, товары возвращены на склад!" << std::endl;
     return true;
+}
+
+// ============ СОЗДАНИЕ НОВОГО ЗАКАЗА (ИНТЕРАКТИВНОЕ) ============
+
+void Order::CreateNewOrder(DatabaseManager& db, AuthManager& auth) {
+    if (!auth.CanEdit()) {
+        std::cout << "Доступ запрещен: Только Менеджер+ может создавать заказы!" << std::endl;
+        return;
+    }
+
+    std::cout << "\n========== СОЗДАНИЕ НОВОГО ЗАКАЗА ==========" << std::endl;
+
+    // Показываем список доступных деталей
+    SQLHSTMT hstmtParts = NULL;
+    if (Part::GetAll(db, hstmtParts)) {
+        std::cout << "\nДоступные детали:" << std::endl;
+        std::cout << "----------------------------------------" << std::endl;
+        SQLINTEGER pid, pstock;
+        char pname[100], pnumber[50];
+        double pprice;
+
+        SQLBindCol(hstmtParts, 1, SQL_C_SLONG, &pid, 0, NULL);
+        SQLBindCol(hstmtParts, 2, SQL_C_CHAR, pname, sizeof(pname), NULL);
+        SQLBindCol(hstmtParts, 3, SQL_C_CHAR, pnumber, sizeof(pnumber), NULL);
+        SQLBindCol(hstmtParts, 4, SQL_C_DOUBLE, &pprice, 0, NULL);
+        SQLBindCol(hstmtParts, 5, SQL_C_SLONG, &pstock, 0, NULL);
+
+        while (SQLFetch(hstmtParts) == SQL_SUCCESS) {
+            std::cout << "ID: " << pid << " | " << pname << " | Цена: " << pprice << " | Остаток: " << pstock << std::endl;
+        }
+        SQLFreeHandle(SQL_HANDLE_STMT, hstmtParts);
+    }
+
+    // Выбор деталей для заказа
+    std::vector<OrderPartItem> items;
+    int currentEmployeeID = auth.GetCurrentUserID();
+
+    std::cout << "\nВведите дату заказа (ГГГГ-ММ-ДД, Enter для сегодня): ";
+    std::string orderDate;
+    std::cin.ignore();
+    std::getline(std::cin, orderDate);
+    if (orderDate.empty()) {
+        time_t now = time(0);
+        tm* ltm = localtime(&now);
+        std::stringstream ss;
+        ss << 1900 + ltm->tm_year << "-" << (1 + ltm->tm_mon) << "-" << ltm->tm_mday;
+        orderDate = ss.str();
+    }
+
+    int partCount = 0;
+    while (partCount < 3) {
+        std::cout << "\n--- Деталь #" << (partCount + 1) << " ---" << std::endl;
+        int partId = SafeInputInt("Введите ID детали (0 - завершить): ");
+
+        if (partId == 0) break;
+
+        // Проверяем существует ли деталь
+        Part tempPart;
+        if (!tempPart.Read(db, partId)) {
+            std::cout << "Деталь с ID " << partId << " не найдена!" << std::endl;
+            continue;
+        }
+
+        int quantity = SafeInputInt("Введите количество: ");
+        if (quantity <= 0) {
+            std::cout << "Количество должно быть положительным!" << std::endl;
+            continue;
+        }
+
+        if (quantity > tempPart.GetStockQuantity()) {
+            std::cout << "Недостаточно на складе! Доступно: " << tempPart.GetStockQuantity() << std::endl;
+            continue;
+        }
+
+        OrderPartItem item;
+        item.partID = partId;
+        item.quantity = quantity;
+        items.push_back(item);
+        partCount++;
+
+        std::cout << "Деталь добавлена в заказ." << std::endl;
+    }
+
+    if (items.empty()) {
+        std::cout << "Заказ не создан: не выбрано ни одной детали." << std::endl;
+        return;
+    }
+
+    // Создаем заказ
+    Order order;
+    if (order.CreateWithProcedure(db, currentEmployeeID, orderDate, items)) {
+        std::cout << "\nЗаказ успешно создан!" << std::endl;
+    }
+    else {
+        std::cout << "\nОшибка при создании заказа!" << std::endl;
+    }
 }

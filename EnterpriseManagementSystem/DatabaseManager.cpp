@@ -82,8 +82,8 @@ bool DatabaseManager::ExecuteNonQuery(const std::string& query) {
         return false;
     }
 
-    std::wstring wQuery(query.begin(), query.end());
-    ret = SQLExecDirectW(hstmt, (SQLWCHAR*)wQuery.c_str(), SQL_NTS);
+    // Используем ANSI версию вместо Wide для избежания проблем с кодировкой
+    ret = SQLExecDirectA(hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
 
     SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
 
@@ -98,8 +98,8 @@ bool DatabaseManager::ExecuteQuery(const std::string& query, SQLHSTMT& hstmt) {
         return false;
     }
 
-    std::wstring wQuery(query.begin(), query.end());
-    ret = SQLExecDirectW(hstmt, (SQLWCHAR*)wQuery.c_str(), SQL_NTS);
+    // Используем ANSI версию вместо Wide для избежания проблем с кодировкой
+    ret = SQLExecDirectA(hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
 
     return (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
 }

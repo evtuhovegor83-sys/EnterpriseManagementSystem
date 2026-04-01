@@ -9,7 +9,7 @@
 bool ReportExporter::ExportToCSV(SQLHSTMT hstmt, const std::string& filename, const std::string& headers) {
     std::ofstream file(filename);
     if (!file.is_open()) {
-        std::cerr << "Error: Cannot open file " << filename << std::endl;
+        std::cerr << "Ошибка: Не удалось открыть файл " << filename << std::endl;
         return false;
     }
 
@@ -47,7 +47,7 @@ bool ReportExporter::ExportToCSV(SQLHSTMT hstmt, const std::string& filename, co
     }
 
     file.close();
-    std::cout << "Report exported to: " << filename << std::endl;
+    std::cout << "Отчет экспортирован в: " << filename << std::endl;
     return true;
 }
 
@@ -63,7 +63,7 @@ bool ReportExporter::ExportEmployeesToCSV(DatabaseManager& db, const std::string
         "LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID";
 
     if (!db.ExecuteQuery(query, hstmt)) {
-        std::cerr << "Error: Failed to execute query for employees export" << std::endl;
+        std::cerr << "Ошибка: Не удалось выполнить запрос для экспорта сотрудников" << std::endl;
         return false;
     }
 
@@ -87,7 +87,7 @@ bool ReportExporter::ExportPartsToCSV(DatabaseManager& db, const std::string& fi
         "LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID";
 
     if (!db.ExecuteQuery(query, hstmt)) {
-        std::cerr << "Error: Failed to execute query for parts export" << std::endl;
+        std::cerr << "Ошибка: Не удалось выполнить запрос для экспорта деталей" << std::endl;
         return false;
     }
 
@@ -103,7 +103,7 @@ bool ReportExporter::ExportOrdersReportToCSV(DatabaseManager& db, const std::str
 
     SQLHSTMT hstmt = NULL;
     if (!Order::GetAllOrdersWithDetails(db, hstmt)) {
-        std::cerr << "Error: Failed to execute query for orders export" << std::endl;
+        std::cerr << "Ошибка: Не удалось выполнить запрос для экспорта заказов" << std::endl;
         return false;
     }
 
@@ -119,7 +119,7 @@ bool ReportExporter::ExportTop5PartsToCSV(DatabaseManager& db, const std::string
 
     SQLHSTMT hstmt = NULL;
     if (!Order::GetTop5PartsBySales(db, startDate, endDate, hstmt)) {
-        std::cerr << "Error: Failed to execute query for top 5 parts export" << std::endl;
+        std::cerr << "Ошибка: Не удалось выполнить запрос для экспорта топ-5 деталей" << std::endl;
         return false;
     }
 
@@ -136,12 +136,12 @@ bool ReportExporter::ExportLowStockToCSV(DatabaseManager& db, int threshold, con
 
     SQLHSTMT hstmt = NULL;
     if (!Part::GetLowStock(db, threshold, hstmt)) {
-        std::cerr << "Error: Failed to execute query for low stock export" << std::endl;
+        std::cerr << "Ошибка: Не удалось выполнить запрос для экспорта деталей с низким остатком" << std::endl;
         return false;
     }
 
     std::stringstream headers;
-    headers << "PartID,PartName,PartNumber,Price,StockQuantity (Threshold: " << threshold << ")";
+    headers << "PartID,PartName,PartNumber,Price,StockQuantity (Порог: " << threshold << ")";
     bool result = ExportToCSV(hstmt, filename, headers.str());
 
     SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
