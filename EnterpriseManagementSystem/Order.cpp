@@ -227,7 +227,7 @@ void Order::CreateNewOrder(DatabaseManager& db, AuthManager& auth) {
 
     std::cout << "\n========== СОЗДАНИЕ НОВОГО ЗАКАЗА ==========" << std::endl;
 
-    // Показываем список доступных деталей
+    // Показываем список доступных деталей!
     SQLHSTMT hstmtParts = NULL;
     if (Part::GetAll(db, hstmtParts)) {
         std::cout << "\nДоступные детали:" << std::endl;
