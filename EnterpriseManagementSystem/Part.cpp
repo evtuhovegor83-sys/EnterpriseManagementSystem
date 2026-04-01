@@ -4,6 +4,10 @@
 #include <regex>
 #include <sstream>
 
+// Прототип функции для безопасного ввода (объявлена в main.cpp)
+int SafeInputInt(const std::string& prompt);
+double SafeInputDouble(const std::string& prompt);
+
 bool Part::ValidatePrice(double price) {
     return price >= 0 && price < 10000000;
 }
@@ -311,5 +315,76 @@ void Part::GetWarehouseStatistics(DatabaseManager& db) {
     }
     else {
         std::cout << "Не удалось получить статистику по складам!" << std::endl;
+    }
+}
+
+// ============ ДОБАВЛЕНИЕ НОВОЙ ДЕТАЛИ ============
+
+void Part::AddNewPart(DatabaseManager& db, AuthManager& auth) {
+    if (!auth.CanEdit()) {
+        std::cout << "Доступ запрещен: Только Менеджер+ может добавлять детали!" << std::endl;
+        return;
+    }
+
+    std::cout << "\n========== ДОБАВЛЕНИЕ НОВОЙ ДЕТАЛИ ==========" << std::endl;
+
+    Part newPart;
+
+    std::cin.ignore();
+    std::string name;
+    std::cout << "Введите название детали: ";
+    std::getline(std::cin, name);
+    if (!newPart.SetPartName(name)) return;
+
+    std::string number;
+    std::cout << "Введите артикул: ";
+    std::getline(std::cin, number);
+    if (!newPart.SetPartNumber(number)) return;
+
+    double price = SafeInputDouble("Введите цену: ");
+    if (!newPart.SetPrice(price)) return;
+
+    int stock = SafeInputInt("Введите количество на складе: ");
+    if (!newPart.SetStockQuantity(stock)) return;
+
+    // Показываем доступные склады
+    SQLHSTMT hstmtWarehouse = NULL;
+    std::string warehouseQuery = "SELECT WarehouseID, WarehouseName FROM Warehouses";
+    if (db.ExecuteQuery(warehouseQuery, hstmtWarehouse)) {
+        std::cout << "\nДоступные склады:" << std::endl;
+        SQLINTEGER wid;
+        char wname[100];
+        SQLBindCol(hstmtWarehouse, 1, SQL_C_SLONG, &wid, 0, NULL);
+        SQLBindCol(hstmtWarehouse, 2, SQL_C_CHAR, wname, sizeof(wname), NULL);
+        while (SQLFetch(hstmtWarehouse) == SQL_SUCCESS) {
+            std::cout << "ID: " << wid << " | " << wname << std::endl;
+        }
+        SQLFreeHandle(SQL_HANDLE_STMT, hstmtWarehouse);
+    }
+    int warehouseId = SafeInputInt("Введите ID склада (0 - без склада): ");
+    if (warehouseId != 0) newPart.SetWarehouseID(warehouseId);
+
+    // Показываем доступных поставщиков
+    SQLHSTMT hstmtSupplier = NULL;
+    std::string supplierQuery = "SELECT SupplierID, SupplierName FROM Suppliers";
+    if (db.ExecuteQuery(supplierQuery, hstmtSupplier)) {
+        std::cout << "\nДоступные поставщики:" << std::endl;
+        SQLINTEGER sid;
+        char sname[100];
+        SQLBindCol(hstmtSupplier, 1, SQL_C_SLONG, &sid, 0, NULL);
+        SQLBindCol(hstmtSupplier, 2, SQL_C_CHAR, sname, sizeof(sname), NULL);
+        while (SQLFetch(hstmtSupplier) == SQL_SUCCESS) {
+            std::cout << "ID: " << sid << " | " << sname << std::endl;
+        }
+        SQLFreeHandle(SQL_HANDLE_STMT, hstmtSupplier);
+    }
+    int supplierId = SafeInputInt("Введите ID поставщика (0 - без поставщика): ");
+    if (supplierId != 0) newPart.SetSupplierID(supplierId);
+
+    if (newPart.Create(db)) {
+        std::cout << "\nДеталь успешно добавлена!" << std::endl;
+    }
+    else {
+        std::cout << "\nОшибка при добавлении детали!" << std::endl;
     }
 }

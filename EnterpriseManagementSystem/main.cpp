@@ -343,7 +343,7 @@ int main() {
             break;
         case 6:
             if (auth.CanEdit()) {
-                std::cout << "Добавление новой детали (функция будет реализована)..." << std::endl;
+                Part::AddNewPart(db, auth);
             }
             else {
                 std::cout << "Доступ запрещен: только Менеджер+ может добавлять детали!" << std::endl;

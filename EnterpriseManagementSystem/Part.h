@@ -65,4 +65,6 @@ public:
 
     // Дополнительная функция 4: Статистика по складу
     static void GetWarehouseStatistics(DatabaseManager& db);
+    // Добавление новой детали (интерактивное)
+    static void AddNewPart(DatabaseManager& db, AuthManager& auth);
 };
