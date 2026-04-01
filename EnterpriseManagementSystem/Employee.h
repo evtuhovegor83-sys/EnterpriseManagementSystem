@@ -2,7 +2,7 @@
 #include <string>
 #include "DatabaseManager.h"
 
-// Forward declaration для избежания циклической зависимости
+// Forward declaration для избежания циклической зависимости!
 class AuthManager;
 
 class Employee {
