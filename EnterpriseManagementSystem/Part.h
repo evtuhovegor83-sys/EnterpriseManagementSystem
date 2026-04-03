@@ -61,7 +61,7 @@ public:
     void SetSupplierID(int id);
 
     // Дополнительная функция 3: Обновление цены с проверкой прав!
-    bool UpdatePriceWithAuth(DatabaseManager& db, AuthManager& auth, int partID, double newPrice);
+    static bool UpdatePriceWithAuth(DatabaseManager& db, AuthManager& auth, int partID, double newPrice);
 
     // Дополнительная функция 4: Статистика по складу!
     static void GetWarehouseStatistics(DatabaseManager& db);

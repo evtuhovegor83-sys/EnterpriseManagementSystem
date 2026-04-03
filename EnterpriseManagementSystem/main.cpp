@@ -498,8 +498,8 @@ int main() {
             int partId = SafeInputInt("\nВведите ID детали для обновления цены: ");
             double newPrice = SafeInputDouble("Введите новую цену: ");
 
-            Part p;
-            p.UpdatePriceWithAuth(db, auth, partId, newPrice);
+            // Вызываем статический метод без создания объекта
+            Part::UpdatePriceWithAuth(db, auth, partId, newPrice);
         }
         break;
         case 18:
